@@ -234,7 +234,9 @@ class TestInitializeIdempotent(unittest.TestCase):
         ctx = StubContext()
         _init_mod.initialize(ctx)
         self.assertEqual(len(ctx.drop_handlers), 1)
-        self.assertEqual(sorted(ctx.file_openers), [".log", ".out"])
+        self.assertEqual(
+            sorted(ctx.file_openers), [".fch", ".fchk", ".log", ".out"]
+        )
 
 
 # ---------------------------------------------------------------------------

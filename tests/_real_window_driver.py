@@ -166,10 +166,14 @@ def main():
 
     report = {}
     for fixture, slots in request.items():
-        path = os.path.join(SAMPLES, fixture + ".out")
+        is_fchk = fixture.endswith(".fchk")
+        path = os.path.join(SAMPLES, fixture if is_fchk else fixture + ".out")
         parser = parser_cls()
         with open(path, encoding="utf-8") as handle:
-            parser.load_from_memory(handle.read(), path)
+            if is_fchk:
+                parser.load_fchk(handle.read(), path)
+            else:
+                parser.load_from_memory(handle.read(), path)
         mw = _Host()
         host = dialog_cls(mw, parser, path, context=MagicMock())
         host.show()

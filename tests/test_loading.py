@@ -153,6 +153,69 @@ class TestReadGaussianText(_LoadingCase):
             M.read_gaussian_text(os.path.join(self.tmp, "nope.out"))
 
 
+class TestCheckpointsBesideOutputs(_LoadingCase):
+    """Whichever of the pair is opened, the job's output and orbitals arrive together."""
+
+    def _copy(self, fixture, name=None):
+        source = os.path.join(os.path.dirname(__file__), "sample_outputs", fixture)
+        with open(source, encoding="utf-8") as handle:
+            return self._write(name or fixture, handle.read())
+
+    def test_a_checkpoint_opens_alone(self):
+        parser = M.load_gaussian_parser(self._copy("water_fk_plain.fchk"), parent=None)
+        self.assertEqual(len(parser.data["mo_coeffs"]), 19)
+        self.assertEqual(parser.data["scf_traces"], [])
+        self.assertEqual(parser.data["termination_status"], "Formatted checkpoint")
+
+    def test_opening_the_output_takes_the_orbitals_from_the_checkpoint(self):
+        self._copy("water_fk_plain.fchk")
+        path = self._copy("water_fk_plain.out")
+        parser = M.load_gaussian_parser(path, parent=None)
+        self.assertEqual(len(parser.data["mo_coeffs"]), 19)
+        self.assertTrue(parser.data["scf_traces"])
+        self.assertIn("water_fk_plain.fchk", parser.data["fchk_note"])
+
+    def test_opening_the_checkpoint_also_reads_the_output(self):
+        self._copy("water_fk_plain.out")
+        path = self._copy("water_fk_plain.fchk")
+        parser = M.load_gaussian_parser(path, parent=None)
+        self.assertEqual(len(parser.data["mo_coeffs"]), 19)
+        self.assertTrue(parser.data["scf_traces"])
+        self.assertEqual(parser.data["termination_status"], "Terminated normally")
+
+    def test_the_windows_name_formchk_writes_is_found(self):
+        self._copy("water_fk_plain.fchk", "job.fch")
+        path = self._copy("water_fk_plain.out", "job.out")
+        parser = M.load_gaussian_parser(path, parent=None)
+        self.assertEqual(len(parser.data["mo_coeffs"]), 19)
+
+    def test_another_jobs_checkpoint_is_noted_and_the_output_still_opens(self):
+        self._copy("h2co_fk_5d7f.fchk", "job.fchk")
+        path = self._copy("water_fk_plain.out", "job.out")
+        parser = M.load_gaussian_parser(path, parent=None)
+        self.assertEqual(parser.data["mo_coeffs"], {})
+        self.assertIn("not used", parser.data["fchk_note"])
+
+    def test_opening_a_checkpoint_beside_another_jobs_output_keeps_the_checkpoint(self):
+        self._copy("h2co_fk_5d7f.out", "job.out")
+        path = self._copy("water_fk_plain.fchk", "job.fchk")
+        parser = M.load_gaussian_parser(path, parent=None)
+        self.assertEqual(parser.data["atoms"], ["O", "H", "H"])
+        self.assertEqual(len(parser.data["mo_coeffs"]), 19)
+        self.assertIn("not used", parser.data["fchk_note"])
+
+    def test_a_broken_checkpoint_does_not_stop_the_output(self):
+        self._write("job.fchk", "not a checkpoint\n")
+        path = self._copy("water_fk_plain.out", "job.out")
+        parser = M.load_gaussian_parser(path, parent=None)
+        self.assertEqual(parser.data["mo_coeffs"], {})
+        self.assertIn("could not be read", parser.data["fchk_note"])
+
+    def test_no_checkpoint_leaves_the_output_as_it_was(self):
+        parser = M.load_gaussian_parser(self._copy("water_fk_plain.out"), parent=None)
+        self.assertEqual(parser.data["fchk_note"], "")
+
+
 class TestLoadGaussianParser(_LoadingCase):
     def test_the_file_is_parsed(self):
         parser = M.load_gaussian_parser(self._write("a.out", OUT_TEXT), parent=None)

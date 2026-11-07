@@ -3,7 +3,7 @@
 PLUGIN_NAME = "Gaussian Result Analyzer"
 PLUGIN_VERSION = "0.1.0"
 PLUGIN_AUTHOR = "HiroYokoyama"
-PLUGIN_DESCRIPTION = "UNDER DEVELOPMENT: Comprehensive analyzer for Gaussian output files (.log, .out). Includes Vibrational, MO, TDDFT, and NMR analysis."
+PLUGIN_DESCRIPTION = "UNDER DEVELOPMENT: Comprehensive analyzer for Gaussian output files (.log, .out) and formatted checkpoints (.fchk). Includes Vibrational, MO, TDDFT, and NMR analysis."
 PLUGIN_TAGS = ["Analysis", "DFT", "File"]
 PLUGIN_SUPPORTED_MOLEDITPY_VERSION = ">=5.0.0, <6.0.0"
 PLUGIN_SUPPORTED_PYTHON_VERSION = ">=3.9, <3.15"
@@ -143,6 +143,14 @@ def is_gaussian_output(path):
     )
 
 
+def is_gaussian_fchk(path):
+    """Whether the start of *path* has the layout of a formatted checkpoint."""
+    from .fchk import looks_like_fchk
+
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        return looks_like_fchk(f.read(512))
+
+
 def initialize(context):
     """Initialize the Gaussian Result Analyzer plugin.
 
@@ -159,9 +167,15 @@ def initialize(context):
         _open_gaussian_file(path, context)
 
     def handle_drop(path):
-        if path.lower().endswith((".log", ".out")):
+        lowered = path.lower()
+        if lowered.endswith((".log", ".out", ".fchk", ".fch")):
             try:
-                if is_gaussian_output(path):
+                is_ours = (
+                    is_gaussian_fchk(path)
+                    if lowered.endswith((".fchk", ".fch"))
+                    else is_gaussian_output(path)
+                )
+                if is_ours:
                     _open_gaussian_file(path, context)
                     return True
             except (OSError, ValueError) as e:
@@ -172,6 +186,13 @@ def initialize(context):
                 )
         return False
 
+    def open_fchk_file(path):
+        if not is_gaussian_fchk(path):
+            raise ValueError(f"{path} is not a formatted checkpoint")
+        _open_gaussian_file(path, context)
+
+    context.register_file_opener(".fchk", open_fchk_file, priority=110)
+    context.register_file_opener(".fch", open_fchk_file, priority=110)
     context.register_file_opener(".log", open_gaussian_file, priority=110)
     context.register_file_opener(".out", open_gaussian_file, priority=110)
     context.register_drop_handler(handle_drop, priority=110)

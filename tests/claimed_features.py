@@ -23,6 +23,21 @@ CLAIMS = [
     ("water_6d_mo", "show_properties", "PropertiesDialog"),
 ]
 
+# The same windows from a formatted checkpoint alone.
+CLAIMS += [
+    ("water_fk_plain.fchk", "show_mo_analyzer", "MODialog"),
+    ("h2co_fk_5d7f.fchk", "show_mo_analyzer", "MODialog"),
+    ("o2_fk_uhf.fchk", "show_mo_analyzer", "MODialog"),
+    ("water_fk_opt.fchk", "show_trajectory", "TrajectoryResultDialog"),
+    ("ethane_fk_scan.fchk", "show_trajectory", "TrajectoryResultDialog"),
+    ("water_fk_force.fchk", "show_forces", "ForceViewerDialog"),
+    ("water_fk_chelpg.fchk", "show_charges", "ChargeDialog"),
+    ("water_fk_plain.fchk", "show_dipole", "DipoleDialog"),
+    ("water_fk_raman.fchk", "show_freq", "FrequencyDialog"),
+    ("h2co_fk_tddft.fchk", "show_tddft", "TDDFTDialog"),
+    ("water_fk_mp2.fchk", "show_energy_components", "EnergyComponentsDialog"),
+]
+
 # (fixture, slot, controls that must be there, controls that must not).
 CONTROLS = [
     ("ethane_scan", "show_trajectory", {"Scan Points", "All Trajectory", "Coordinate"}, {"Load MEP TRJ"}),
@@ -38,6 +53,14 @@ TABS = [
 
 # (fixture, button attribute): a job that has the result enables the button.
 BUTTONS = [
+    ("water_fk_plain.fchk", "btn_mo"),
+    ("water_fk_plain.fchk", "btn_fchk"),
+    ("water_fk_plain.fchk", "btn_charge"),
+    ("water_fk_plain.fchk", "btn_dipole"),
+    ("water_fk_opt.fchk", "btn_traj"),
+    ("water_fk_force.fchk", "btn_forces"),
+    ("water_fk_raman.fchk", "btn_freq"),
+    ("h2co_fk_tddft.fchk", "btn_tddft"),
     ("water_6d_mo", "btn_scf"),
     ("water_6d_mo", "btn_mo"),
     ("o2_triplet_uhf_opt", "btn_traj"),

@@ -30,9 +30,12 @@ def _parse(name):
         package.PLUGIN_VERSION = "test"
         sys.modules[_PKG] = package
     parser = importlib.import_module(f"{_PKG}.parser").GaussianParser()
-    path = os.path.join(_SAMPLES, name + ".out")
+    path = os.path.join(_SAMPLES, name if name.endswith(".fchk") else name + ".out")
     with open(path, encoding="utf-8") as handle:
-        parser.load_from_memory(handle.read(), path)
+        if name.endswith(".fchk"):
+            parser.load_fchk(handle.read(), path)
+        else:
+            parser.load_from_memory(handle.read(), path)
     return parser.data
 
 

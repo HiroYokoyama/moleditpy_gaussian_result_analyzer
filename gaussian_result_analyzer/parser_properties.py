@@ -213,6 +213,8 @@ class _PropertyParsingMixin:
                     charges["APT"] = rows
             elif text.startswith("Hirshfeld charges, spin densities, dipoles, and CM5"):
                 self._read_hirshfeld(i + 2)
+            elif text.startswith("SCF Done:"):
+                npa_read = False
             elif text.startswith("Summary of Natural Population Analysis") and not npa_read:
                 # An open-shell job repeats this table per spin afterwards, with
                 # spin populations rather than charges: only the first is charges.

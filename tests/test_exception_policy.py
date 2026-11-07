@@ -39,6 +39,7 @@ _REASON_CATEGORIES = (
 # parser.py is pure text parsing with no UI slots, so every handler in it can
 # name its types. Verified bit-identical over the 19 sample outputs.
 _FULLY_NARROWED = {
+    "fchk.py",
     "parser.py",
     "parser_structure.py",
     "parser_electronic.py",

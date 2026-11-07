@@ -22,6 +22,13 @@ def _samples():
     return sorted(f for f in os.listdir(SAMPLES) if f.endswith((".log", ".out")))
 
 
+_SAFE_MOLECULES = {"benzene", "ethane", "h2co", "o2", "water"}
+
+
+def _checkpoints():
+    return sorted(f for f in os.listdir(SAMPLES) if f.endswith(".fchk"))
+
+
 def _read(name):
     with open(os.path.join(SAMPLES, name), encoding="utf-8") as handle:
         return handle.read()
@@ -34,6 +41,15 @@ class TestFixturePrivacy(unittest.TestCase):
     def test_no_identifying_text(self):
         for name in _samples():
             text = _read(name)
+            for label, pattern in _FORBIDDEN.items():
+                with self.subTest(fixture=name, kind=label):
+                    self.assertIsNone(pattern.search(text))
+
+    def test_checkpoints_hold_no_identifying_text(self):
+        self.assertGreater(len(_checkpoints()), 10)
+        for name in _checkpoints():
+            text = _read(name)
+            self.assertIn(name.split("_")[0], _SAFE_MOLECULES)
             for label, pattern in _FORBIDDEN.items():
                 with self.subTest(fixture=name, kind=label):
                     self.assertIsNone(pattern.search(text))

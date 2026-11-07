@@ -10,6 +10,7 @@ import os
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
+from .fchk import FCHK_EXTENSIONS, looks_like_fchk
 from .parser import GaussianParser, ParseCancelled
 
 #: Tried in order for BOM-less files. UTF-16 is deliberately absent: almost any
@@ -105,6 +106,73 @@ class LoadProgress:
             logging.debug("LoadProgress: hide/close/delete failed — %s", exc)
 
 
+def is_fchk_path(path):
+    """Whether *path* has an extension formchk writes."""
+    return path.lower().endswith(FCHK_EXTENSIONS)
+
+
+def _first_existing(path, extensions):
+    """The file beside *path* with one of *extensions*, in either case."""
+    stem = os.path.splitext(path)[0]
+    for extension in extensions:
+        for candidate in (stem + extension, stem + extension.upper()):
+            if os.path.isfile(candidate):
+                return candidate
+    return ""
+
+
+def sibling_fchk(path):
+    """The checkpoint with the same name as an output file, or an empty string."""
+    return _first_existing(path, FCHK_EXTENSIONS)
+
+
+def attach_fchk(parser, fchk_path):
+    """Use a checkpoint's orbitals, recording why not when it is another job's.
+
+    True when they were taken. A broken file beside the output must not stop the
+    output from opening, so that outcome is a note rather than an exception.
+    """
+    name = os.path.basename(fchk_path)
+    try:
+        reason = parser.merge_fchk(read_gaussian_text(fchk_path))
+    except (OSError, ValueError) as exc:
+        logging.warning("Reading the checkpoint %s failed: %s", fchk_path, exc)
+        parser.data["fchk_note"] = f"{name} could not be read: {exc}"
+        return False
+    if reason:
+        logging.warning("Not using the checkpoint %s: %s", fchk_path, reason)
+        parser.data["fchk_note"] = f"{name} not used: {reason}."
+        return False
+    parser.data["fchk_path"] = fchk_path
+    parser.data["fchk_note"] = f"Orbitals from {name}."
+    return True
+
+
+def _add_sibling_output(parser, fchk_path, progress):
+    """Opening a checkpoint also reads the job's output file when it is beside it."""
+    log_path = _first_existing(fchk_path, (".log", ".out"))
+    if not log_path:
+        return
+    try:
+        text = read_gaussian_text(log_path)
+    except OSError as exc:
+        logging.warning("Reading the output file %s failed: %s", log_path, exc)
+        return
+    if "Entering Gaussian System" not in text[:4096] and (
+        "Gaussian, Inc." not in text[:4096]
+    ):
+        return
+    combined = GaussianParser()
+    combined.load_from_memory(text, log_path, progress=progress)
+    if attach_fchk(combined, fchk_path):
+        parser.filename = combined.filename
+        parser.raw_content = combined.raw_content
+        parser.lines = combined.lines
+        parser.data = combined.data
+    else:
+        parser.data["fchk_note"] = combined.data["fchk_note"]
+
+
 def load_gaussian_parser(path, parent):
     """Read and parse *path* behind a progress dialog.
 
@@ -120,7 +188,15 @@ def load_gaussian_parser(path, parent):
 
         parser = GaussianParser()
         try:
-            parser.load_from_memory(content, path, progress=progress.on_parse_step)
+            if is_fchk_path(path) and looks_like_fchk(content):
+                parser.load_fchk(content, path, progress=progress.on_parse_step)
+                parser.data["fchk_path"] = path
+                _add_sibling_output(parser, path, progress.on_parse_step)
+            else:
+                parser.load_from_memory(content, path, progress=progress.on_parse_step)
+                fchk_path = sibling_fchk(path)
+                if fchk_path:
+                    attach_fchk(parser, fchk_path)
         except ParseCancelled:
             return None
         return parser

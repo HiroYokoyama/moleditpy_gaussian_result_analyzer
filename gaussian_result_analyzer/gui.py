@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QAction, QIcon, QDesktopServices
 from PySide6.QtCore import QSize, Qt, QObject, QEvent, QTimer, QUrl
-from .loading import load_gaussian_parser
+from .loading import attach_fchk, load_gaussian_parser
 from .parser import IMAGINARY_FREQ_THRESHOLD
 from .utils import (
     normalize_atom_symbol,
@@ -271,7 +271,9 @@ class GaussianResultAnalyzerDialog(QDialog):
         if mime.hasUrls():
             for url in mime.urls():
                 local = url.toLocalFile()
-                if os.path.isdir(local) or local.lower().endswith((".log", ".out")):
+                if os.path.isdir(local) or local.lower().endswith(
+                    (".log", ".out", ".fchk", ".fch")
+                ):
                     accept_drop_as_copy(event)
                     return
         event.ignore()
@@ -285,7 +287,9 @@ class GaussianResultAnalyzerDialog(QDialog):
             local = url.toLocalFile()
             if os.path.isdir(local):
                 open_it = self._open_directory_path
-            elif local.lower().endswith((".log", ".out")) and os.path.isfile(local):
+            elif local.lower().endswith(
+                (".log", ".out", ".fchk", ".fch")
+            ) and os.path.isfile(local):
                 open_it = self.load_file
             else:
                 continue
@@ -556,7 +560,12 @@ class GaussianResultAnalyzerDialog(QDialog):
         self.btn_view_output.setToolTip(
             "Open the raw Gaussian output file in the text viewer"
         )
+        self.btn_fchk = QPushButton("Load .fchk")
+        self.btn_fchk.setToolTip("Take the orbitals from a formatted checkpoint")
+        self.btn_fchk.clicked.connect(self.load_fchk)
+        self.btn_fchk.setEnabled(False)
         btns_top_layout.addWidget(self.btn_view_output)
+        btns_top_layout.addWidget(self.btn_fchk)
 
         file_frame_layout.addLayout(btns_top_layout)
 
@@ -890,7 +899,7 @@ class GaussianResultAnalyzerDialog(QDialog):
         start_dir = os.path.dirname(self.file_path) if self.file_path else ""
 
         path, _ = QFileDialog.getOpenFileName(
-            self, "Open Gaussian Output", start_dir, "Gaussian Output (*.log *.out);;All Files (*)"
+            self, "Open Gaussian Output", start_dir, "Gaussian Output (*.log *.out *.fchk *.fch);;All Files (*)"
         )
         if not path:
             return
@@ -928,11 +937,35 @@ class GaussianResultAnalyzerDialog(QDialog):
             self.load_structure_3d(fit_camera=True)
             self.update_button_states()
 
-            notify(self, f"Successfully loaded: {os.path.basename(path)}", 5000)
+            note = self.parser.data.get("fchk_note", "")
+            notify(
+                self,
+                f"Successfully loaded: {os.path.basename(path)}. {note}".strip(),
+                5000,
+            )
 
         # Qt slot: a slot must never crash the app (CONTRIBUTING.md 4B)
         except Exception as e:  # pylint: disable=broad-exception-caught
             QMessageBox.critical(self, "Error", f"Failed to load file:\n{e}")
+
+    def load_fchk(self):
+        """Take the orbitals from a checkpoint chosen by the user."""
+        start_dir = os.path.dirname(self.file_path) if self.file_path else ""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Formatted Checkpoint",
+            start_dir,
+            "Formatted Checkpoint (*.fchk *.fch);;All Files (*)",
+        )
+        if not path:
+            return
+        if not self.close_all_sub_dialogs():
+            return
+        if attach_fchk(self.parser, path):
+            self.update_button_states()
+            notify(self, self.parser.data["fchk_note"], 5000)
+        else:
+            QMessageBox.warning(self, "Load .fchk", self.parser.data["fchk_note"])
 
     def update_file_info_labels(self):
         """Update the file info labels (Path, Time, Versions)"""
@@ -1042,8 +1075,15 @@ class GaussianResultAnalyzerDialog(QDialog):
         if not has_mo:
             tooltip = "No MO data found"
         elif orb_energies and not mo_coeffs:
-            tooltip = "Orbital energies available (no coefficients for visualization)"
+            tooltip = (
+                "Orbital energies available (no coefficients for visualization).\n"
+                "Use Load .fchk, or request them with Pop=Full GFInput IOp(6/7=3)."
+            )
         self.btn_mo.setToolTip(tooltip)
+        self.btn_fchk.setEnabled(bool(data.get("atoms")))
+        self.btn_fchk.setToolTip(
+            data.get("fchk_note") or "Take the orbitals from a formatted checkpoint"
+        )
 
         freqs = data.get("frequencies", [])
         has_freq = bool(freqs and len(freqs) > 0)

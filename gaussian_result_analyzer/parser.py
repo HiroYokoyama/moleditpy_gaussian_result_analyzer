@@ -1,6 +1,7 @@
 """GaussianParser: assembles the parsing mixins and drives parse_all's step order."""
 
 from .parser_structure import _StructureParsingMixin
+from . import fchk
 from .parser_electronic import _ElectronicParsingMixin
 from .parser_properties import _PropertyParsingMixin, AU_TO_DEBYE
 from .parser_spectra import _SpectraParsingMixin, IMAGINARY_FREQ_THRESHOLD
@@ -52,6 +53,8 @@ class GaussianParser(
             "scan_steps": [],
             "all_steps": [],
             "termination_status": "Running",
+            "fchk_path": "",
+            "fchk_note": "",
         }
 
     #: (method name, label) in execution order. Gradients must be parsed
@@ -85,6 +88,72 @@ class GaussianParser(
         self.raw_content = content
         self.lines = content.splitlines()
         self.parse_all(progress=progress)
+
+    def load_fchk(self, content, filename="", progress=None):
+        """Fill the data from a formatted checkpoint, with no output file."""
+        self._reset_data()
+        self.filename = filename
+        self.raw_content = ""
+        self.lines = []
+        if progress is not None:
+            progress(0, 1, "Reading formatted checkpoint")
+        sections = fchk.read_sections(content)
+        atoms, coords = fchk.structure(sections)
+        data = self.data
+        data["atoms"] = atoms
+        data["coords"] = coords
+        data["charge"] = sections.get("Charge", 0)
+        data["mult"] = sections.get("Multiplicity", 1)
+        data["scf_energy"] = sections.get("SCF Energy", sections.get("Total Energy"))
+        data["version"] = sections.get("Gaussian Version")
+        data["termination_status"] = "Formatted checkpoint"
+        data["charges"] = fchk.atomic_charges(sections, atoms)
+        data["dipole"] = data["dipoles"] = fchk.dipole(sections)
+        data["gradients"] = fchk.gradients(sections, atoms)
+        data["frequencies"] = fchk.normal_modes(sections, len(atoms))
+        data["scan_steps"], data["is_scan"] = fchk.optimization_steps(sections, atoms)
+        data["tddft"] = fchk.excited_states(sections)
+        s2 = sections.get("S**2")
+        if s2 is not None:
+            spin = (data["mult"] - 1) / 2
+            ideal = spin * (spin + 1)
+            data["spin_s2"] = {
+                "actual": s2,
+                "ideal": ideal,
+                "contamination": s2 - ideal,
+            }
+        if "MP2 Energy" in sections:
+            data["energy_components"] = [
+                {
+                    "label": "MP2 Total",
+                    "value": sections["MP2 Energy"],
+                    "dimensionless": False,
+                }
+            ]
+        self._take_orbitals(sections)
+        if progress is not None:
+            progress(1, 1, "Finished")
+
+    def merge_fchk(self, content):
+        """Take the orbitals from a checkpoint of this job; say why not otherwise."""
+        sections = fchk.read_sections(content)
+        reason = fchk.why_it_differs(self.data, sections)
+        if not reason:
+            self._take_orbitals(sections)
+        return reason
+
+    def _take_orbitals(self, sections):
+        """Replace orbitals and basis with the checkpoint's, when it has them."""
+        atoms, coords = fchk.structure(sections)
+        orbitals = fchk.molecular_orbitals(sections, atoms)
+        if not orbitals:
+            return
+        types = sections["Shell types"]
+        self.data["mo_coeffs"] = orbitals
+        self.data["cartesian_d"] = 2 in types
+        self.data["cartesian_f"] = 3 in types
+        self.data["basis_set_shells"] = fchk.basis_shells(sections, coords)
+        self.parse_orbital_energies()
 
     def parse_all(self, progress=None):
         """Run every parse step.

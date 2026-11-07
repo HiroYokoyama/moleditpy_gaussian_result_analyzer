@@ -1,7 +1,11 @@
 # MoleditPy Gaussian Result Analyzer Plugin
 
 [![Tests](https://github.com/HiroYokoyama/moleditpy_gaussian_result_analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/moleditpy_gaussian_result_analyzer/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/HiroYokoyama/moleditpy_gaussian_result_analyzer/graph/badge.svg)](https://codecov.io/gh/HiroYokoyama/moleditpy_gaussian_result_analyzer)
 [![MoleditPy](https://img.shields.io/badge/MoleditPy->=5.0.0-3577F7)](https://github.com/HiroYokoyama/python_molecular_editor)
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/HiroYokoyama)
+[![GitHub tag](https://img.shields.io/github/v/tag/HiroYokoyama/moleditpy_gaussian_result_analyzer?label=version)](https://github.com/HiroYokoyama/moleditpy_gaussian_result_analyzer/tags)
+[![GitHub Downloads](https://img.shields.io/github/downloads/HiroYokoyama/moleditpy_gaussian_result_analyzer/total)](https://github.com/HiroYokoyama/moleditpy_gaussian_result_analyzer/releases)
 
 A plugin for MoleditPy that reads Gaussian output (`.log`, `.out`) and presents it
 as analysis windows: orbitals, vibrational modes, spectra, charges and
@@ -12,6 +16,23 @@ Gaussian is a registered trademark of Gaussian, Inc. This plugin is an independe
 project and is not affiliated with or endorsed by Gaussian, Inc. You need your own
 licensed copy of Gaussian to produce the files it reads.
 
+## Screenshots
+
+![Main window](img/main.png)
+
+| Molecular orbitals | Relaxed scan |
+|---|---|
+| ![Molecular orbitals](img/mo.png) | ![Relaxed scan](img/scan.png) |
+
+| Frequencies | NMR |
+|---|---|
+| ![Frequencies](img/frequencies.png) | ![NMR](img/nmr.png) |
+
+![TD-DFT spectrum](img/tddft.png)
+
+All taken from the jobs in `tests/sample_outputs`. The 3D view belongs to the MoleditPy
+window, so the isosurfaces and animated modes appear there rather than here.
+
 ## Features
 
 - **SCF trace**: energy against iteration for every SCF in the job.
@@ -21,7 +42,7 @@ licensed copy of Gaussian to produce the files it reads.
 - **Optimization and scan**: energy against step, or against the scanned coordinate
   for relaxed scans, with animation and GIF export.
 - **Forces**: gradients for each geometry, rotated into the orientation shown.
-- **Atomic charges**: Mulliken, APT, ESP, CHELPG, Merz-Kollman, Hirshfeld, CM5, NPA.
+- **Atomic charges**: Mulliken, APT, CHELPG, Merz-Kollman, Hirshfeld, CM5, NPA.
 - **Dipole moment** as a vector on the structure.
 - **Frequencies**: normal modes with IR and Raman intensities, animated.
 - **Thermochemistry**: ZPE, enthalpy, Gibbs energy and entropy term.
@@ -52,9 +73,15 @@ Most analyses work from standard output. Some need a keyword in the route sectio
 
 The **MO** window has a button that copies the orbital keywords to the clipboard.
 
+## What each claim is tested with
+
+Every feature above has a real Gaussian 16 job in `tests/sample_outputs`.
+`tests/claimed_features.py` lists them. `tests/test_claimed_features.py` checks that
+each job enables its button, and `tests/test_real_windows.py` opens each window under
+real Qt and presses its buttons.
+
 ## Known limitations
 
-- Gaussian does not print Mayer bond orders, so that table stays empty.
 - Cartesian g functions are not supported. The orbital window refuses to draw them
   rather than showing an orbital that looks right and is not.
 

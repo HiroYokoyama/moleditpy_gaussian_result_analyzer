@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import re
-import logging
 import math
 
 try:
     import numpy as np
 except ImportError:  # the pytest-only CI job has no numpy
     np = None
-
-_XYZ_NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 
 #: Atomic symbols indexed by atomic number; 0 is a ghost/dummy centre.
 ELEMENTS = (
@@ -44,146 +41,6 @@ def symbol_for(atomic_number):
 
 class _StructureParsingMixin:
     """Parsing of geometry, job status, forces and optimization trajectories."""
-
-    def parse_xyz_content(self, content: str) -> list[dict]:
-        """Parse multi-frame XYZ content."""
-        lines = content.splitlines()
-        steps = []
-        i = 0
-        n_lines = len(lines)
-
-        while i < n_lines:
-            line = lines[i].strip()
-            if not line:
-                i += 1
-                continue
-
-            # Number of atoms
-            try:
-                natoms = int(line)
-            except ValueError:
-                i += 1
-                continue
-
-            if natoms <= 0:
-                logging.warning("XYZ: ignoring invalid atom count %d", natoms)
-                i += 1
-                continue
-
-            i += 1
-            if i >= n_lines:
-                break
-
-            # Comment line (extract energy if possible)
-            comment = lines[i].strip()
-
-            is_excluded = False
-            upper_comment = comment.upper()
-
-            # Check TS
-            if re.search(r"\bTS\b", upper_comment):
-                is_excluded = True
-
-            # Check CI, but carefully
-            # Only exclude if it's NOT "CI-NEB" or similar method string
-            if re.search(r"\bCI\b", upper_comment):
-                # It contains CI. Check if it is part of CI-NEB
-                if "CI-NEB" not in upper_comment:
-                    is_excluded = True
-
-            if is_excluded:
-                # Skip this step (atoms + coords)
-                # We need to advance i by natoms
-                i += 1 + natoms
-                continue
-
-            # Try robust extraction of Energy and Distance/Coord from comment
-            energy = 0.0
-            dist_val = None
-
-            # 1. Look for Energy Label: "Energy: -123.4" or "Energy -123.4" or "E -123.4"
-            # The label must be a whole word: without \b the trailing "e" of a
-            # preceding word (e.g. "Coordinate 1.2") matches the bare-"E"
-            # alternative case-insensitively and steals the wrong number.
-            e_match = re.search(
-                rf"\b(?:Energy|E)\b[=:\s]+({_XYZ_NUMBER})",
-                comment,
-                re.IGNORECASE,
-            )
-            if e_match:
-                try:
-                    energy = float(e_match.group(1))
-                except (IndexError, TypeError, ValueError) as e:
-                    logging.debug(
-                        "XYZ: could not parse the energy label from comment %r: %s",
-                        comment,
-                        e,
-                    )
-            else:
-                # Fallback: Just take the last float (usually energy)
-                floats = re.findall(_XYZ_NUMBER, comment)
-                if floats:
-                    try:
-                        energy = float(floats[-1])
-                    except (IndexError, TypeError, ValueError) as e:
-                        logging.debug(
-                            "XYZ: could not parse a fallback energy value from comment %r: %s",
-                            comment,
-                            e,
-                        )
-
-            # 2. Look for Distance/Coordinate Label: "Dist 1.2" or "Coord 1.2"
-            d_match = re.search(
-                rf"\b(?:Dist(?:ance)?|Coord(?:inate)?|Scan)[=:\s]+({_XYZ_NUMBER})",
-                comment,
-                re.IGNORECASE,
-            )
-            if d_match:
-                try:
-                    dist_val = float(d_match.group(1))
-                except (IndexError, TypeError, ValueError) as e:
-                    logging.debug(
-                        "XYZ: could not parse the scan coordinate from comment %r: %s",
-                        comment,
-                        e,
-                    )
-
-            i += 1
-
-            atoms = []
-            coords = []
-
-            for _ in range(natoms):
-                if i >= n_lines:
-                    break
-                parts = lines[i].split()
-                if len(parts) >= 4:
-                    # A single malformed coordinate line must not abort the
-                    # whole multi-frame parse — skip just that atom.
-                    try:
-                        xyz = [float(parts[1]), float(parts[2]), float(parts[3])]
-                    except ValueError:
-                        i += 1
-                        continue
-                    if not all(math.isfinite(value) for value in xyz):
-                        i += 1
-                        continue
-                    atoms.append(parts[0])
-                    coords.append(xyz)
-                i += 1
-
-            steps.append(
-                {
-                    "type": "neb_step",
-                    "energy": energy,
-                    "dist": dist_val,
-                    "scan_coord": dist_val,
-                    "atoms": atoms,
-                    "coords": coords,
-                }
-            )
-
-        return steps
 
     def _read_geometry(self, header_idx):
         """(atoms, coords) of the orientation table whose title is at header_idx."""

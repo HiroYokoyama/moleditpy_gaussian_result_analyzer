@@ -158,8 +158,6 @@ class TestVdwRadius(unittest.TestCase):
 
 
 class TestBondDialog(_BondCase):
-    def test_the_dialog_keeps_the_bond_orders(self):
-        self.assertEqual(len(self.dlg._mbo), 2)
 
     def test_the_dialog_keeps_the_nbo_orbitals(self):
         self.assertEqual(len(self.dlg._nbo), 1)
@@ -167,10 +165,6 @@ class TestBondDialog(_BondCase):
     def test_no_highlight_is_active_initially(self):
         self.assertEqual(self.dlg._actors, [])
 
-    def test_a_dialog_without_data_still_builds(self):
-        dlg = B.BondAnalysisDialog(self.host, {})
-        self.assertEqual(dlg._mbo, [])
-        self.assertEqual(dlg._nbo, [])
 
     def test_coordinates_come_from_the_parser(self):
         self.assertEqual(len(self.dlg._coords()), 3)
@@ -222,20 +216,7 @@ class TestBondDialog(_BondCase):
 
 
 class TestHighlighting(_BondCase):
-    def test_highlighting_a_bond_draws_a_tube_and_two_halos(self):
-        self.dlg._highlight_bond(0, 1)
-        self.assertEqual(self.plotter.add_mesh.call_count, 3)
-        self.assertEqual(len(self.dlg._actors), 3)
 
-    def test_highlighting_a_bond_clears_the_previous_one(self):
-        self.dlg._highlight_bond(0, 1)
-        self.plotter.reset_mock()
-        self.dlg._highlight_bond(0, 2)
-        self.assertEqual(self.plotter.remove_actor.call_count, 3)
-
-    def test_an_out_of_range_bond_draws_nothing(self):
-        self.dlg._highlight_bond(0, 99)
-        self.plotter.add_mesh.assert_not_called()
 
     def test_highlighting_atoms_draws_one_halo_each(self):
         self.dlg._highlight_atoms([0, 1])
@@ -245,11 +226,6 @@ class TestHighlighting(_BondCase):
         self.dlg._highlight_atoms([0, 99])
         self.assertEqual(self.plotter.add_mesh.call_count, 1)
 
-    def test_clearing_removes_every_actor(self):
-        self.dlg._highlight_bond(0, 1)
-        self.dlg._clear_highlight()
-        self.assertEqual(self.dlg._actors, [])
-        self.assertEqual(self.plotter.remove_actor.call_count, 3)
 
     def test_clearing_without_a_plotter_still_drops_the_actors(self):
         host = MagicMock(spec=[])  # no .mw at all
@@ -264,11 +240,6 @@ class TestHighlighting(_BondCase):
         self.dlg._actors = [object()]
         self.dlg._clear_highlight()  # must not raise
         self.assertEqual(self.dlg._actors, [])
-
-    def test_highlighting_without_coordinates_draws_nothing(self):
-        self.host.parser.data = {"coords": []}
-        self.dlg._highlight_bond(0, 1)
-        self.plotter.add_mesh.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -380,25 +351,6 @@ class TestSelection(_BondCase):
     def test_an_empty_selection_is_reported_as_none(self):
         self.assertIsNone(B.BondAnalysisDialog._single_selected_row(self._table([])))
 
-    def test_selecting_a_bond_row_highlights_that_bond(self):
-        with patch.object(self.dlg, "_highlight_bond") as hl:
-            self.dlg._on_mayer_selected(self._table([1]))
-        hl.assert_called_once_with(0, 2)
-
-    def test_deselecting_clears_the_highlight(self):
-        with patch.object(self.dlg, "_clear_highlight") as clear:
-            self.dlg._on_mayer_selected(self._table([]))
-        clear.assert_called_once()
-
-    def test_a_multi_row_selection_clears_the_highlight(self):
-        with patch.object(self.dlg, "_clear_highlight") as clear:
-            self.dlg._on_mayer_selected(self._table([0, 1]))
-        clear.assert_called_once()
-
-    def test_an_out_of_range_bond_row_is_ignored(self):
-        with patch.object(self.dlg, "_highlight_bond") as hl:
-            self.dlg._on_mayer_selected(self._table([99]))
-        hl.assert_not_called()
 
     def test_selecting_an_nbo_row_highlights_its_atoms(self):
         with patch.object(self.dlg, "_highlight_atoms") as hl:

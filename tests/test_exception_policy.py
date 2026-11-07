@@ -25,7 +25,7 @@ _PKG = os.path.normpath(
 # reason in the commit message. Was 212 before the 3.12.2 narrowing pass, 50
 # before the 4.0.0 narrow-or-justify pass, 46 before the cancellable NMR
 # coupling simulation.
-_MAX_BROAD_HANDLERS = 43
+_MAX_BROAD_HANDLERS = 40
 
 # A surviving broad handler must name one of these on the `except` line or
 # the line above it (see test_broad_handlers_carry_a_reason_category).

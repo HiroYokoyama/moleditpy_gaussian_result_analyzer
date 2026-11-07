@@ -217,11 +217,6 @@ class TestTrajModes(_TrajModeCase):
         dlg.on_traj_mode_changed()
         self.assertFalse(dlg.show_relative)
 
-    def test_neb_paths_stay_relative_in_every_mode(self):
-        dlg = self._make(_neb_steps())
-        dlg.radio_scan.setChecked(False)
-        dlg.on_traj_mode_changed()
-        self.assertTrue(dlg.show_relative)
 
     def test_an_unchecked_sender_is_ignored(self):
         dlg = self._make(_scan_steps())

@@ -21,7 +21,7 @@ as a zip of that directory.
   The ~30 `parse_*` methods live in four mixins it inherits —
   `parser_structure.py` (geometry, trajectory, gradients, scans),
   `parser_electronic.py` (MO coefficients, orbital energies, basis, SCF trace),
-  `parser_properties.py` (dipole, charges, NBO, Mayer, energy components) and
+  `parser_properties.py` (dipole, charges, NBO, energy components) and
   `parser_spectra.py` (NMR, TD-DFT, thermochemistry, frequencies). They all
   fill one `self.data` dict; every dialog reads from that dict. A new Gaussian
   block means a new `parse_*` method in the matching mixin, called from
@@ -154,6 +154,13 @@ Match what `parser.py` actually produces, or tests pass against fiction:
 - NBO hybrids are dicts with `atom_sym`, `atom_idx`, `s_pct`, `p_pct`, `d_pct`,
   `label`.
 - FMO rows label atoms with a single `"0-C"` token.
+
+## Features follow the program
+
+A control exists only for what Gaussian prints: no Mayer, NEB or per-mode dipole
+derivative controls. `tests/claimed_features.py` is the list of claims, each with a
+real job; add to it with any new feature, and run `tests/test_real_windows.py`, which
+presses every button under real Qt.
 
 ## Sample outputs
 

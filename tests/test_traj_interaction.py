@@ -77,35 +77,7 @@ class _TrajCase(unittest.TestCase):
 
 
 class TestAutoLoad(_TrajCase):
-    def test_the_predicted_trajectory_is_used_when_present(self):
-        self._write_trj("explicit_MEP_trj.xyz")
-        dlg = self._make(
-            _summary_steps(), base_dir=self.tmp, predicted_trj="explicit_MEP_trj.xyz"
-        )
-        with patch.object(dlg, "load_external_trj") as load:
-            dlg.run_auto_load()
-        load.assert_called_once_with(
-            os.path.join(self.tmp, "explicit_MEP_trj.xyz"), silent=True
-        )
 
-    def test_the_standard_name_beside_the_output_is_tried(self):
-        out = os.path.join(self.tmp, "job.out")
-        self._write_trj("job_MEP_trj.xyz")
-        dlg = self._make(_summary_steps(), base_dir=self.tmp, output_path=out)
-        with patch.object(dlg, "load_external_trj") as load:
-            dlg.run_auto_load()
-        load.assert_called_once_with(
-            os.path.join(self.tmp, "job_MEP_trj.xyz"), silent=True
-        )
-
-    def test_a_lone_trajectory_in_the_directory_is_found_heuristically(self):
-        self._write_trj("something_else_MEP_trj.xyz")
-        dlg = self._make(_summary_steps(), base_dir=self.tmp)
-        with patch.object(dlg, "load_external_trj") as load:
-            dlg.run_auto_load()
-        load.assert_called_once_with(
-            os.path.join(self.tmp, "something_else_MEP_trj.xyz"), silent=True
-        )
 
     def test_ambiguous_candidates_are_not_guessed_between(self):
         self._write_trj("a_MEP_trj.xyz")
@@ -116,13 +88,6 @@ class TestAutoLoad(_TrajCase):
                 dlg.run_auto_load()
         load.assert_not_called()
 
-    def test_the_user_is_prompted_when_nothing_is_found(self):
-        dlg = self._make(_summary_steps(), base_dir=self.tmp)
-        with patch.object(TR.QTimer, "singleShot") as later:
-            dlg.run_auto_load()
-        later.assert_called_once()
-        # a fresh bound method each access, so compare by equality
-        self.assertEqual(later.call_args.args[1], dlg.load_mep_trj)
 
     def test_a_trajectory_that_already_has_geometry_is_left_alone(self):
         dlg = self._make(_full_steps(), base_dir=self.tmp)
@@ -149,13 +114,6 @@ class TestAutoLoad(_TrajCase):
 
 
 class TestManualLoad(_TrajCase):
-    def test_choosing_a_file_loads_it(self):
-        dlg = self._make(_summary_steps(), base_dir=self.tmp)
-        chosen = self._write_trj("picked_MEP_trj.xyz")
-        with patch.object(TR.QFileDialog, "getOpenFileName", return_value=(chosen, "")):
-            with patch.object(dlg, "load_external_trj") as load:
-                dlg.load_mep_trj()
-        load.assert_called_once_with(chosen)
 
     def test_cancelling_loads_nothing(self):
         dlg = self._make(_summary_steps(), base_dir=self.tmp)
@@ -163,18 +121,6 @@ class TestManualLoad(_TrajCase):
             with patch.object(dlg, "load_external_trj") as load:
                 dlg.load_mep_trj()
         load.assert_not_called()
-
-    def test_the_chooser_starts_at_the_predicted_file(self):
-        dlg = self._make(
-            _summary_steps(), base_dir=self.tmp, predicted_trj="guess_MEP_trj.xyz"
-        )
-        with patch.object(
-            TR.QFileDialog, "getOpenFileName", return_value=("", "")
-        ) as chooser:
-            dlg.load_mep_trj()
-        self.assertEqual(
-            chooser.call_args.args[2], os.path.join(self.tmp, "guess_MEP_trj.xyz")
-        )
 
 
 # ---------------------------------------------------------------------------

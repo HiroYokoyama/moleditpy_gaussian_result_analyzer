@@ -173,9 +173,6 @@ class TestHighlight(unittest.TestCase):
         else:
             sys.modules.pop("pyvista", None)
 
-    def test_bond_highlight_adds_tube_and_two_spheres(self):
-        self.dlg._highlight_bond(0, 1)
-        self.assertEqual(len(self.dlg._actors), 3)
 
     def test_atom_highlight_one_sphere_per_atom(self):
         self.dlg._highlight_atoms([0, 1])
@@ -189,11 +186,6 @@ class TestHighlight(unittest.TestCase):
         self.dlg._highlight_bond(0, 99)
         self.assertEqual(len(self.dlg._actors), 0)
 
-    def test_clear_removes_all_actors(self):
-        self.dlg._highlight_bond(0, 1)
-        self.assertEqual(len(self.dlg._actors), 3)
-        self.dlg._clear_highlight()
-        self.assertEqual(len(self.dlg._actors), 0)
 
     def test_reselect_replaces_previous_highlight(self):
         self.dlg._highlight_bond(0, 1)

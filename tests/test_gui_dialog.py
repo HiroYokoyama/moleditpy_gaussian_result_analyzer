@@ -158,14 +158,6 @@ class TestButtonStates(_GuiCase):
         dlg = self._with(scan_steps=[{"energy": -1.0, "type": "opt_cycle"}])
         self.assertTrue(dlg.btn_forces.isEnabled())
 
-    def test_an_neb_summary_alone_does_not_enable_forces(self):
-        # NEB path summaries carry no gradient data
-        dlg = self._with(scan_steps=[{"energy": -1.0, "type": "neb_image"}])
-        self.assertFalse(dlg.btn_forces.isEnabled())
-
-    def test_neb_structure_steps_alone_do_not_enable_forces(self):
-        dlg = self._with(scan_steps=[{"energy": -1.0, "type": "neb_step"}])
-        self.assertFalse(dlg.btn_forces.isEnabled())
 
     def test_gradients_enable_forces_even_for_neb(self):
         dlg = self._with(

@@ -1,13 +1,6 @@
-"""Bond Analysis panel: Mayer bond orders and NBO results.
+"""Bond Analysis panel: NBO results, when the job ran Pop=NBO.
 
-Tabs are shown only for the data present in the file:
-  - Mayer bond orders
-  - NBO orbitals (NATURAL BOND ORBITALS summary)
-  - NBO second-order perturbation (donor -> acceptor E(2))
-
-Selecting a row highlights the relevant bond / atoms in the host 3D editor:
-a Mayer bond row highlights that bond; an NBO orbital row highlights the
-atom(s) it spans.
+Selecting an orbital row highlights the atom(s) it spans in the 3D editor.
 """
 
 import logging
@@ -161,7 +154,7 @@ def _vdw(sym):
 
 
 class BondAnalysisDialog(QDialog):
-    """Dialog showing Mayer bond orders and NBO results with 3D highlighting."""
+    """Dialog showing NBO results."""
 
     def __init__(self, parent, data):
         super().__init__(parent)
@@ -170,7 +163,6 @@ class BondAnalysisDialog(QDialog):
         self.resize(900, 640)
 
         self._actors = []
-        self._mbo = data.get("mayer_bond_orders", [])
         self._nbo = data.get("nbo_orbitals", [])
         pert = data.get("nbo_perturbation", [])
 
@@ -178,19 +170,6 @@ class BondAnalysisDialog(QDialog):
         tabs = QTabWidget()
         # Switching tabs clears any active 3D highlight.
         tabs.currentChanged.connect(lambda _i: self._clear_highlight())
-
-        if self._mbo:
-            rows = [
-                [
-                    f"{b['atom_idx1']} {b['atom_sym1']}",
-                    f"{b['atom_idx2']} {b['atom_sym2']}",
-                    f"{b['order']:.4f}",
-                ]
-                for b in self._mbo
-            ]
-            t = _make_table(["Atom 1", "Atom 2", "Bond Order"], rows)
-            t.itemSelectionChanged.connect(lambda tbl=t: self._on_mayer_selected(tbl))
-            tabs.addTab(t, f"Mayer Bond Orders ({len(self._mbo)})")
 
         if self._nbo:
             rows = [
@@ -318,35 +297,6 @@ class BondAnalysisDialog(QDialog):
                 e,
             )
 
-    def _highlight_bond(self, i, j):
-        self._clear_highlight()
-        plotter = self._plotter()
-        coords = self._coords()
-        atoms = self._atoms()
-        if plotter is None or not coords:
-            return
-        if not (0 <= i < len(coords) and 0 <= j < len(coords)):
-            return
-        try:
-            import pyvista as pv
-
-            p1, p2 = coords[i], coords[j]
-            tube = pv.Line(p1, p2).tube(radius=0.12)
-            self._actors.append(plotter.add_mesh(tube, color="yellow", opacity=0.7))
-            for idx, p in ((i, p1), (j, p2)):
-                sphere = pv.Sphere(radius=self._halo_radius(idx, atoms), center=p)
-                self._actors.append(
-                    plotter.add_mesh(sphere, color="orange", opacity=0.4)
-                )
-            plotter.render()
-        except (ImportError, RuntimeError, AttributeError, IndexError) as e:
-            logging.warning(
-                "Bond analysis: could not highlight the bond %d-%d in the 3D view: %s",
-                i,
-                j,
-                e,
-            )
-
     @staticmethod
     def _single_selected_row(table):
         """Return the row index iff exactly one row is selected, else None.
@@ -356,15 +306,6 @@ class BondAnalysisDialog(QDialog):
         """
         rows = table.selectionModel().selectedRows()
         return rows[0].row() if len(rows) == 1 else None
-
-    def _on_mayer_selected(self, table):
-        row = self._single_selected_row(table)
-        if row is None:
-            self._clear_highlight()
-            return
-        if 0 <= row < len(self._mbo):
-            b = self._mbo[row]
-            self._highlight_bond(b["atom_idx1"], b["atom_idx2"])
 
     def _on_nbo_selected(self, table):
         row = self._single_selected_row(table)

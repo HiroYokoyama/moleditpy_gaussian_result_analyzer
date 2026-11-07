@@ -112,10 +112,6 @@ class _PropertyParsingMixin:
             if label in found
         ]
 
-    def parse_mayer_bond_orders(self):
-        """Gaussian does not print Mayer bond orders; the table stays empty."""
-        self.data["mayer_bond_orders"] = []
-
     def parse_nbo_orbitals(self):
         """The Natural Bond Orbitals summary, every spin section included."""
         orbitals = []

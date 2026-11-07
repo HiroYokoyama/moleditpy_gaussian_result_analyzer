@@ -128,10 +128,6 @@ class TestConstruction(unittest.TestCase):
         self.assertFalse(dlg.show_relative)
         self.assertFalse(dlg.showing_scan_points)
 
-    def test_neb_paths_are_shown_relative(self):
-        dlg = _make(_neb_steps())
-        self.assertTrue(dlg.show_relative)
-
     def test_neb_paths_default_to_the_coordinate_axis(self):
         dlg = _make(_neb_steps())
         self.assertTrue(dlg.show_coord_x)
@@ -387,14 +383,6 @@ class TestClosedDialogGuards(_TrajCase):
 
 
 class TestToggles(_TrajCase):
-    def test_log_scale_follows_the_checkbox(self):
-        self.dlg.chk_log.setChecked(True)
-        self.dlg.on_log_changed()
-        self.assertTrue(self.dlg.use_log_scale)
-
-        self.dlg.chk_log.setChecked(False)
-        self.dlg.on_log_changed()
-        self.assertFalse(self.dlg.use_log_scale)
 
     def test_the_coordinate_axis_follows_the_radio_button(self):
         self.dlg.sender = lambda: None
@@ -502,15 +490,6 @@ if __name__ == "__main__":
 
 
 class TestExternalTrajectoryWithoutEnergies(_TrajCase):
-    def test_frames_without_energies_warn_instead_of_emptying_silently(self):
-        path = os.path.join(self.tmp, "noenergy.xyz")
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write("1\nframe\nH 0 0 0\n1\nframe\nH 0 0 1\n")
-        before = list(self.dlg.steps)
-        with patch.object(T.QMessageBox, "warning") as warn:
-            self.dlg.load_external_trj(path)
-        warn.assert_called_once()
-        self.assertEqual(self.dlg.steps, before)
 
     def test_the_silent_auto_load_stays_silent(self):
         path = os.path.join(self.tmp, "noenergy.xyz")

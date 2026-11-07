@@ -174,6 +174,19 @@ class TestOrbitals(unittest.TestCase):
         self.assertEqual(len(data["mo_coeffs"]), 60)
         self.assertEqual(len(data["mo_coeffs"]["29_beta"]["coeffs"]), 30)
 
+    def test_every_orbital_energy_is_read(self):
+        mos = _parse("water_6d_mo")["mo_coeffs"]
+        expected = {0: -19.13804, 1: -0.99747, 4: -0.29106, 5: 0.06257, 18: 3.55235}
+        for index, energy in expected.items():
+            self.assertAlmostEqual(mos[f"{index}_restricted"]["energy"], energy)
+
+    def test_unrestricted_orbital_energies_are_read(self):
+        data = _parse("o2_triplet_uhf_opt")
+        for spin in ("alpha", "beta"):
+            energies = [data["mo_coeffs"][f"{i}_{spin}"]["energy"] for i in range(30)]
+            self.assertEqual(energies, sorted(energies))
+            self.assertNotIn(0.0, energies)
+
     def test_pure_shells_are_not_flagged_cartesian(self):
         data = _parse("h2co_5d7f_mo")
         self.assertFalse(data["cartesian_d"])

@@ -65,7 +65,6 @@ class GaussianParser(
         ("parse_mo_coeffs", "Reading MO coefficients"),
         ("parse_orbital_energies", "Reading orbital energies"),
         ("parse_charges", "Reading atomic charges"),
-        ("parse_mayer_bond_orders", "Reading bond orders"),
         ("parse_nbo_orbitals", "Reading NBO orbitals"),
         ("parse_nbo_perturbation", "Reading NBO perturbation analysis"),
         ("parse_dipole", "Reading dipole moment"),

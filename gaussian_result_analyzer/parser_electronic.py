@@ -99,7 +99,9 @@ class _ElectronicParsingMixin:
             stripped = line.strip()
             if stripped.startswith("Eigenvalues --"):
                 # Overflowing energies print as asterisks; those stay at 0.
-                values = line.split("--", 1)[1]
+                # The fields are 10 wide and right-aligned, after a varying gap.
+                values = line.split("--", 1)[1].rstrip()
+                values = values[len(values) - 10 * len(columns) :]
                 for k, column in enumerate(columns):
                     text = values[k * 10 : k * 10 + 10].strip()
                     self.data["mo_coeffs"][f"{column}_{spin}"] = {

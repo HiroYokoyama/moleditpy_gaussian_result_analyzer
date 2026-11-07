@@ -1055,30 +1055,10 @@ class GaussianResultAnalyzerDialog(QDialog):
         has_scan = bool(scan_steps and len(scan_steps) > 0)
         self.btn_traj.setEnabled(has_scan)
         self.btn_traj.setToolTip("" if has_scan else "No trajectory/scan steps found")
-
-        # Enable Forces button if gradients exist or scan exists (BUT NOT FOR NEB SUMMARY)
+        # Enable Forces button if gradients exist or scan exists
         grads = data.get("gradients", [])
         scan_steps = data.get("scan_steps", [])
-
-        # Check if scan steps are purely NEB images (summary only, no force data)
-        # Note: If we auto-loaded XYZ, we now HAVE structure steps (type='neb_step' from xyz parser or similar)
-        # xyz parser sets type='neb_step', summary parser sets type='neb_image'
-        # If it's 'neb_step', it might have structure but NO FORCES.
-        # Actually standard XYZ doesn't have forces.
-        # So we should likely still keep Forces disabled if 'neb_step' unless we parsed gradients separately.
-
-        is_neb_summary = False
-        if scan_steps and isinstance(scan_steps, list):
-            first_type = scan_steps[0].get("type", None)
-            if first_type in [
-                "neb_image",
-                "neb_step",
-            ]:  # Both summary and XYZ steps usually lack Forces in standard Gaussian XYZ
-                is_neb_summary = True
-
-        has_forces = bool(grads)
-        if scan_steps and not is_neb_summary:
-            has_forces = True
+        has_forces = bool(grads or scan_steps)
 
         self.btn_forces.setEnabled(has_forces)
         tooltip = ""
@@ -1251,7 +1231,7 @@ class GaussianResultAnalyzerDialog(QDialog):
         self.freq_dlg.show()
 
     def show_trajectory(self):
-        """Open the Trajectory/NEB dialog on the parsed optimization or scan steps."""
+        """Open the trajectory dialog on the parsed optimization or scan steps."""
         data = self.parser.data.get("scan_steps", [])
         if not data:
             QMessageBox.warning(
@@ -1262,15 +1242,13 @@ class GaussianResultAnalyzerDialog(QDialog):
             self.traj_dlg.close()
         charge = self.parser.data.get("charge", 0)
         base_dir = os.path.dirname(self.file_path) if self.file_path else None
-        parsed_trj = self.parser.data.get("neb_trj_file", None)
         self.traj_dlg = TrajectoryResultDialog(
             self.mw,
             data,
             charge=charge,
-            title="Trajectory / NEB Analysis",
+            title="Optimization / Scan Analysis",
             base_dir=base_dir,
             output_path=self.file_path,
-            predicted_trj=parsed_trj,
             context=self.context,
         )
         self.traj_dlg.show()
@@ -1434,13 +1412,12 @@ class GaussianResultAnalyzerDialog(QDialog):
         self.props_dlg.show()
 
     def show_bond_analysis(self):
-        """Open the Bond Analysis dialog on Mayer bond orders and NBO results."""
+        """Open the Bond Analysis dialog on the NBO results."""
         from .bond_analysis import BondAnalysisDialog
 
         data = self.parser.data
         if not (
-            data.get("mayer_bond_orders")
-            or data.get("nbo_orbitals")
+            data.get("nbo_orbitals")
             or data.get("nbo_perturbation")
         ):
             QMessageBox.warning(self, "No Info", "No bond-analysis data found.")

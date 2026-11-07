@@ -258,7 +258,6 @@ class TestRemainingLaunchers(unittest.TestCase):
         kwargs = traj.call_args.kwargs
         self.assertEqual(kwargs["base_dir"], self.tmp)
         self.assertEqual(kwargs["output_path"], self.path)
-        self.assertEqual(kwargs["predicted_trj"], "job_MEP.xyz")
 
     def test_the_trajectory_window_refuses_without_steps(self):
         self.parser.data = {}
@@ -340,14 +339,6 @@ class TestRemainingLaunchers(unittest.TestCase):
                     self.dlg.show_forces()
         graph.assert_called_once()
         forces.assert_not_called()
-
-    def test_the_bond_window_opens_with_bond_data(self):
-        self.parser.data = {"mayer_bond_orders": [{"atom_idx1": 0, "atom_idx2": 1}]}
-        self.dlg.bond_dlg = None
-        patcher, bonds = self._lazy_dialog("bond_analysis", "BondAnalysisDialog")
-        with patcher:
-            self.dlg.show_bond_analysis()
-        bonds.assert_called_once()
 
     def test_nbo_data_alone_opens_the_bond_window(self):
         self.parser.data = {"nbo_orbitals": [{"index": 1}]}

@@ -1,4 +1,4 @@
-"""Trajectory/scan dialog: energy profile plot, structure playback, MEP loading and export."""
+"""Trajectory/scan dialog: energy profile plot, structure playback and export."""
 
 import csv
 import os
@@ -57,7 +57,7 @@ class MplCanvas(FigureCanvasQTAgg):
 
 
 class TrajectoryResultDialog(QDialog):
-    """Trajectory/scan dialog: energy profile plot, structure playback and MEP/export controls."""
+    """Trajectory/scan dialog: energy profile plot, structure playback and export."""
 
     # pylint: disable=attribute-defined-outside-init
     # Qt pattern: widget attributes are set in init_ui(), called from __init__.
@@ -70,7 +70,6 @@ class TrajectoryResultDialog(QDialog):
         title="Trajectory Analysis",
         base_dir=None,
         output_path=None,
-        predicted_trj=None,
         context=None,
     ):
         super().__init__()
@@ -86,7 +85,6 @@ class TrajectoryResultDialog(QDialog):
         self.steps = steps  # Current steps to display
         self.charge = charge
         self.output_path = output_path
-        self.predicted_trj = predicted_trj
 
         # Filtering setup
         self.all_steps = steps
@@ -97,20 +95,13 @@ class TrajectoryResultDialog(QDialog):
         if len(self.scan_points) < len(self.all_steps) and len(self.scan_points) > 0:
             self.steps = self.scan_points
             self.showing_scan_points = True
-        # Detection for NEB / Path analysis
-        is_neb = any(
-            s.get("type", None) in ["neb_image", "neb_step"] for s in self.all_steps
-        )
-
-        self.show_relative = self.showing_scan_points or is_neb
-
-        # Default X-axis to Coordinate for NEB (always) or if scan coord values are present.
-        # NEB path distance is always the meaningful x-axis even when dist=0.0 on the first image.
+        self.show_relative = self.showing_scan_points
+        # The coordinate axis is the default when the scan reports one.
         has_coord_values = any(
             s.get("scan_coord", None) is not None or s.get("dist", None) is not None
             for s in self.all_steps
         )
-        self.show_coord_x = is_neb or has_coord_values
+        self.show_coord_x = has_coord_values
         self.use_log_scale = False
         self.is_playing = False
         self.timer = QTimer()
@@ -155,71 +146,6 @@ class TrajectoryResultDialog(QDialog):
         # emits valueChanged, so on_step_changed would not fire otherwise).
         QTimer.singleShot(0, lambda: self.on_step_changed(self.slider.value()))
 
-        # Schedule auto-load check after dialog init
-        QTimer.singleShot(10, self.run_auto_load)
-
-    def run_auto_load(self):
-        """Attempts to auto-load TRJ if structure is missing."""
-        if getattr(self, "_is_closing", False):
-            return
-        # Strict check: Only auto-load if it looks like an NEB calculation (Path Summary)
-        # parser.py tags NEB path summary items with type='neb_image'
-        if not self.steps:
-            return
-
-        is_neb = self.steps[0].get("type", None) == "neb_image"
-
-        if not self.steps[0].get("atoms", None) and is_neb:
-            loaded = False
-
-            # 1. Try Specific Candidates (Parsed or Output-based)
-            candidates = []
-            if self.base_dir:
-                if self.predicted_trj:
-                    candidates.append(os.path.join(self.base_dir, self.predicted_trj))
-                if self.output_path:
-                    # Standard naming: [Basename]_MEP_trj.xyz
-                    base = os.path.splitext(os.path.basename(self.output_path))[0]
-                    cand = os.path.join(self.base_dir, base + "_MEP_trj.xyz")
-                    if cand not in candidates:
-                        candidates.append(cand)
-
-            for path in candidates:
-                if os.path.exists(path):
-                    try:
-                        self.load_external_trj(path, silent=True)
-                        loaded = True
-                        break
-                    # Qt slot: a slot must never crash the app (CONTRIBUTING.md 4B)
-                    except Exception as e:  # pylint: disable=broad-exception-caught
-                        logging.warning(
-                            "Trajectory: could not auto-load candidate trajectory file %s: %s",
-                            path,
-                            e,
-                        )
-
-            if not loaded and self.base_dir:
-                # 2. Heuristic: look for unique *_MEP_trj.xyz in base_dir
-                try:
-                    f_cands = [
-                        f
-                        for f in os.listdir(self.base_dir)
-                        if f.endswith("_MEP_trj.xyz")
-                    ]
-                    if len(f_cands) == 1:
-                        full_path = os.path.join(self.base_dir, f_cands[0])
-                        self.load_external_trj(full_path, silent=True)
-                        loaded = True
-                except (OSError, IndexError) as e:
-                    logging.warning(
-                        "Trajectory: could not scan %s for a unique _MEP_trj.xyz file: %s",
-                        self.base_dir,
-                        e,
-                    )
-
-            if not loaded:
-                # 3. Last resort: prompt user
-                QTimer.singleShot(200, self.load_mep_trj)
 
     def init_ui(self):
         """Build the step slider, view/energy/axis toggles and playback/export buttons."""
@@ -329,7 +255,6 @@ class TrajectoryResultDialog(QDialog):
 
         self.btn_play = QPushButton("Play")
         self.btn_play.clicked.connect(self.toggle_play)
-        # Disable if no structure (NEB Summary)
         if self.steps and not self.steps[0].get("atoms", None):
             self.btn_play.setEnabled(False)
         btn_layout.addWidget(self.btn_play)
@@ -380,26 +305,9 @@ class TrajectoryResultDialog(QDialog):
         self.btn_save_gif = QPushButton("Save GIF")
         self.btn_save_gif.clicked.connect(self.save_gif)
         self.btn_save_gif.setEnabled(HAS_PIL)
-        # Disable if no structure (NEB Summary)
         if self.steps and not self.steps[0].get("atoms", None):
             self.btn_save_gif.setEnabled(False)
         btn_layout.addWidget(self.btn_save_gif)
-
-        # Load MEP TRJ Button (Only for NEB)
-        is_neb = False
-        if self.steps:
-            ft = self.steps[0].get("type", None)
-            if ft in ["neb_image", "neb_step"]:
-                is_neb = True
-
-        if is_neb:
-            btn_load_trj = QPushButton("Load MEP TRJ")
-            btn_load_trj.clicked.connect(self.load_mep_trj)
-            btn_layout.addWidget(btn_load_trj)
-
-        # Auto-launch MEP TRJ loader logic
-        # If we have data but no structure (e.g. NEB Summary), try to find the file ourselves
-        # This block is now handled in __init__ after init_ui and plot_data
 
         btn_close = QPushButton("Close")
         btn_close.clicked.connect(self.close)
@@ -468,11 +376,7 @@ class TrajectoryResultDialog(QDialog):
             self.show_relative = True
         else:
             self.steps = self.all_steps
-            # NEB stays relative; plain optimization goes absolute
-            is_neb = any(
-                s.get("type", None) in ["neb_image", "neb_step"] for s in self.steps
-            )
-            self.show_relative = is_neb
+            self.show_relative = False
 
         # Update energy radio silently (no signal -> no double plot)
         self.radio_rel.blockSignals(True)
@@ -580,8 +484,8 @@ class TrajectoryResultDialog(QDialog):
             return
 
         if self.show_coord_x:
-            # Try to get scan values or NEB distances.
-            # Use explicit None checks so that 0.0 (first NEB image) is not skipped.
+            # Try to get scan values.
+            # Use explicit None checks so that 0.0 is not skipped.
             x = []
             for i, s in enumerate(self.steps):
                 v = s.get("scan_coord", None)
@@ -592,11 +496,6 @@ class TrajectoryResultDialog(QDialog):
                 x.append(v)
 
             xlabel = "Scan Coordinate"
-            if self.steps and self.steps[0].get("type", None) in [
-                "neb_image",
-                "neb_step",
-            ]:
-                xlabel = "Path Distance (Angstrom)"
         else:
             x = list(range(len(self.steps)))
             xlabel = "Step"
@@ -732,7 +631,7 @@ class TrajectoryResultDialog(QDialog):
                 f"Step {idx + 1}/{len(self.steps)}{coord_info} | {val:.8f} {self.current_unit}"
             )
 
-        # NEB Safety: If no atoms (PATH SUMMARY), skip structure update
+        # Without atoms there is no structure to update
         if not step.get("atoms", None):
             return
 
@@ -786,195 +685,9 @@ class TrajectoryResultDialog(QDialog):
         elif event.button == "down":
             self.slider.setValue(min(self.slider.value() + 1, len(self.steps) - 1))
 
-    def load_mep_trj(self):
-        """Prompt for an MEP trajectory XYZ file and load it to replace the current steps."""
-        if getattr(self, "_is_closing", False):
-            return
-        start_path = self.base_dir if self.base_dir else ""
-
-        # Try to suggest a filename if available
-        if self.base_dir:
-            if self.predicted_trj:
-                start_path = os.path.join(self.base_dir, self.predicted_trj)
-            elif self.output_path:
-                base = os.path.splitext(os.path.basename(self.output_path))[0]
-                start_path = os.path.join(self.base_dir, base + "_MEP_trj.xyz")
-
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Open MEP Trajectory", start_path, "XYZ Files (*.xyz);;All Files (*)"
-        )
-        if not path:
-            return
-        self.load_external_trj(path)
-
-    def load_external_trj(self, path, silent=False):
-        """Parse an external XYZ trajectory file and replace the dialog's steps with it."""
-        try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
-                content = f.read()
-            parser = GaussianParser()
-            steps = parser.parse_xyz_content(content)
-            if not steps:
-                if not silent:
-                    QMessageBox.warning(
-                        self, "Error", "No valid steps found in XYZ file."
-                    )
-                return
-
-            # Filter out steps with zero energy (incomplete cycles in running calculations)
-            steps = [
-                s
-                for s in steps
-                if s.get("energy") is not None and abs(s["energy"]) > 1e-9
-            ]
-            if not steps:
-                # Frames without an energy in their comment line are dropped
-                # above; with none left the dialog used to empty itself
-                # without a word.
-                if not silent:
-                    QMessageBox.warning(
-                        self,
-                        "Error",
-                        "The XYZ file has no frames with an energy in their "
-                        "comment line.",
-                    )
-                return
-
-            # Merge dist from existing steps into new steps if lengths match
-            # (Preserves Path Summary distances even if XYZ lacks them)
-            if len(steps) == len(self.steps):
-                for i, s in enumerate(steps):
-                    if s.get("dist", None) is None:
-                        d = self.steps[i].get("dist", None)
-                        s["dist"] = d
-                        s["scan_coord"] = d
-
-            self.steps = steps
-            # Keep all_steps and scan_points consistent with the new data
-            self.all_steps = steps
-            self.scan_points = self.compute_scan_points(steps)
-
-            # Update View toggles
-            has_distinction = len(self.scan_points) < len(self.all_steps)
-            self.radio_full.setEnabled(has_distinction)
-            self.radio_scan.setEnabled(has_distinction)
-            if not has_distinction:
-                self.radio_full.blockSignals(True)
-                self.radio_scan.blockSignals(True)
-                self.radio_full.setChecked(True)
-                self.radio_full.blockSignals(False)
-                self.radio_scan.blockSignals(False)
-                self.showing_scan_points = False
-                self.steps = self.all_steps
-
-            # Recalculate global minimum
-            self.global_min_e = min(s["energy"] for s in steps) if steps else 0
-
-            self.slider.blockSignals(True)
-            self.slider.setMaximum(len(self.steps) - 1)
-            self.slider.setValue(0)
-            self.slider.blockSignals(False)
-
-            # Re-enable buttons if we now have structure
-            if self.steps and self.steps[0].get("atoms", None):
-                self.btn_play.setEnabled(True)
-                self.btn_save_gif.setEnabled(HAS_PIL)
-
-            # Re-detect coordinate availability for external data.
-            # NEB is always coord-based even when XYZ frames lack a dist label in comments.
-            is_neb_trj = any(
-                s.get("type", None) in ["neb_image", "neb_step"] for s in self.steps
-            )
-            has_coords = any(
-                s.get("scan_coord", None) is not None or s.get("dist", None) is not None
-                for s in self.steps
-            )
-            self.show_coord_x = is_neb_trj or has_coords
-
-            # Update X-axis radio buttons
-            self.radio_coord.blockSignals(True)
-            self.radio_idx.blockSignals(True)
-            self.radio_coord.setChecked(self.show_coord_x)
-            self.radio_idx.setChecked(not self.show_coord_x)
-            self.radio_coord.setEnabled(self.show_coord_x)
-            self.radio_coord.blockSignals(False)
-            self.radio_idx.blockSignals(False)
-
-            self.recalc_energies()
-            self.plot_data()
-            self.on_step_changed(0)
-
-            # Request UI update on Main Window (Minimize 2D, Reset Camera)
-            mw = self.gl_widget
-
-            # Treat Gaussian molecules as XYZ-derived (fixed geometry)
-            mw.is_xyz_derived = True
-
-            # Enter 3D mode which enables export/analysis buttons and hides 2D panel
-            if hasattr(mw, "ui_manager"):
-                if hasattr(mw.ui_manager, "enter_3d_viewer_mode"):
-                    try:
-                        mw.ui_manager.enter_3d_viewer_mode()
-                    except (AttributeError, RuntimeError) as e:
-                        logging.warning(
-                            "Trajectory: could not switch the main window into 3D viewer mode: %s",
-                            e,
-                        )
-                elif hasattr(mw.ui_manager, "_enter_3d_viewer_ui_mode"):
-                    try:
-                        mw.ui_manager._enter_3d_viewer_ui_mode()
-                    except (AttributeError, RuntimeError) as e:
-                        logging.warning(
-                            "Trajectory: could not switch the main window into 3D viewer mode: %s",
-                            e,
-                        )
-                else:
-                    try:
-                        self.context.set_3d_features_enabled(True)
-                        if hasattr(mw.ui_manager, "minimize_2d_panel"):
-                            mw.ui_manager.minimize_2d_panel()
-                    # Qt slot: a slot must never crash the app (CONTRIBUTING.md 4B)
-                    except Exception as e:  # pylint: disable=broad-exception-caught
-                        logging.warning(
-                            "Trajectory: could not enable 3D features / minimize the 2D panel: %s",
-                            e,
-                        )
-            elif hasattr(mw, "init_manager") and hasattr(mw.init_manager, "splitter"):
-                # Fallback for manual splitter manipulation if ui_manager is missing
-                try:
-                    total = mw.init_manager.splitter.width()
-                    mw.init_manager.splitter.setSizes([0, total])
-                except IndexError as e:
-                    logging.warning(
-                        "Trajectory: could not resize the main-window splitter for 3D mode: %s",
-                        e,
-                    )
-
-            # Reset Camera
-            if self.context:
-                try:
-                    self.context.reset_3d_camera()
-                except (AttributeError, RuntimeError) as e:
-                    logging.warning(
-                        "Trajectory: could not reset the 3D camera via the host context: %s",
-                        e,
-                    )
-            elif hasattr(mw, "plotter") and mw.plotter:
-                try:
-                    mw.plotter.reset_camera()
-                except (RuntimeError, AttributeError, KeyError, ValueError) as e:
-                    logging.warning("Trajectory: could not reset the 3D camera: %s", e)
-
-            # Only show message if manual load (optional, or just show it)
-            # QMessageBox.information(self, "Loaded", f"Loaded {len(steps)} frames from TRJ.")
-        # Qt slot: a slot must never crash the app (CONTRIBUTING.md 4B)
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            if not silent:
-                QMessageBox.critical(self, "Error", f"Failed to load TRJ:\n{e}")
-
     def on_pick(self, event):
         """Jump the slider to the plot point clicked by the user."""
-        # Disable pick if current steps have no atoms (NEB Summary)
+        # Disable pick if current steps have no atoms
         if self.steps and not self.steps[0].get("atoms", None):
             return
 

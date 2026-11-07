@@ -139,21 +139,24 @@ class GaussianParser(
         sections = fchk.read_sections(content)
         reason = fchk.why_it_differs(self.data, sections)
         if not reason:
-            self._take_orbitals(sections)
+            if not self._take_orbitals(sections):
+                return "it has no complete molecular orbitals and basis set"
         return reason
 
     def _take_orbitals(self, sections):
         """Replace orbitals and basis with the checkpoint's, when it has them."""
         atoms, coords = fchk.structure(sections)
+        shells = fchk.basis_shells(sections, coords)
         orbitals = fchk.molecular_orbitals(sections, atoms)
-        if not orbitals:
-            return
+        if not orbitals or not shells:
+            return False
         types = sections["Shell types"]
         self.data["mo_coeffs"] = orbitals
         self.data["cartesian_d"] = 2 in types
         self.data["cartesian_f"] = 3 in types
-        self.data["basis_set_shells"] = fchk.basis_shells(sections, coords)
+        self.data["basis_set_shells"] = shells
         self.parse_orbital_energies()
+        return True
 
     def parse_all(self, progress=None):
         """Run every parse step.

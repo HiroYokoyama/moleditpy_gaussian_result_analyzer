@@ -143,6 +143,10 @@ def _triples(values, factor=1.0):
 def structure(sections):
     """(element symbols, coordinates in Angstrom)."""
     atoms = [_symbol(number) for number in sections["Atomic numbers"]]
+    if len(atoms) != sections.get("Number of atoms", len(atoms)) or len(
+        sections["Current cartesian coordinates"]
+    ) != 3 * len(atoms):
+        raise ValueError("The checkpoint coordinates do not match the number of atoms.")
     return atoms, _triples(
         sections["Current cartesian coordinates"], BOHR_TO_ANGSTROM
     )
@@ -157,7 +161,19 @@ def basis_shells(sections, coords):
     coefficients = sections.get("Contraction coefficients")
     if not (types and counts and atoms and exponents and coefficients):
         return []
+    if not (len(types) == len(counts) == len(atoms)) or any(
+        count < 1 for count in counts
+    ):
+        raise ValueError("The checkpoint shell arrays have inconsistent lengths.")
+    if any(atom < 1 or atom > len(coords) for atom in atoms):
+        raise ValueError("The checkpoint shell map refers to a missing atom.")
+    if sum(counts) != len(exponents) or len(exponents) != len(coefficients):
+        raise ValueError("The checkpoint primitive arrays have inconsistent lengths.")
     sp_coefficients = sections.get("P(S=P) Contraction coefficients")
+    if -1 in types and (not sp_coefficients or len(sp_coefficients) != len(exponents)):
+        raise ValueError("An SP shell has incomplete P coefficients.")
+    if any(abs(shell_type) >= len(_SHELL_LETTER) for shell_type in types):
+        raise ValueError("The checkpoint contains an unsupported shell type.")
     shells = []
     start = 0
     for shell_type, count, atom in zip(types, counts, atoms):
@@ -423,10 +439,16 @@ def why_it_differs(log_data, sections):
     atoms, coords = structure(sections)
     if atoms != log_data.get("atoms"):
         return "its atoms differ from the output file's"
+    for key, name in (("charge", "Charge"), ("mult", "Multiplicity")):
+        if name in sections and sections[name] != log_data.get(key):
+            return f"its {name.lower()} differs from the output file's"
+    log_coords = log_data.get("coords") or []
+    if len(coords) != len(log_coords) or any(len(row) != 3 for row in log_coords):
+        return "its geometry or orientation differs from the output file's"
     largest = max(
         (
             abs(a - b)
-            for pair in zip(coords, log_data.get("coords") or [])
+            for pair in zip(coords, log_coords)
             for a, b in zip(*pair)
         ),
         default=float("inf"),

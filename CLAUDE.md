@@ -4,8 +4,9 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-A MoleditPy plugin that parses Gaussian quantum-chemistry output (`.log`, `.out`) and
-presents it as analysis dialogs — MO visualisation, vibrational modes, NMR,
+A MoleditPy plugin that reads Gaussian quantum-chemistry output (`.log`, `.out`)
+and formatted checkpoints (`.fchk`, `.fch`) and presents analysis dialogs —
+MO visualisation, vibrational modes, NMR,
 TD-DFT, charges, forces, trajectories. PySide6 for the UI, pyvista for the 3D
 viewer, matplotlib for plots, rdkit for molecule handling.
 
@@ -31,6 +32,12 @@ as a zip of that directory.
   allowed in any of them.
 - `gui.py` — `GaussianResultAnalyzerDialog`, the main window. Owns the file loading,
   the 3D structure, atom picking, and one `show_*` launcher per analysis dialog.
+- `fchk.py` — formatted checkpoint sections, structure, basis and orbitals, plus
+  properties available without a log. `loading.py` finds matching sibling files;
+  the main window's **Load .fchk** attaches one manually. Attachment checks atoms,
+  geometry, charge, multiplicity and SCF energy before replacing orbitals.
+  `tests/test_fchk.py` compares the paired `*_fk_*.out` / `.fchk` fixtures and
+  independently checks orbital orthonormality on a numerical grid.
 - One module per analysis type (`freq_analysis.py`, `mo_analysis.py`, …), each a
   self-contained `QDialog`. `NMRDialog` is split the same way `GaussianParser` is:
   `nmr_analysis.py` holds the dialog and its UI, with `nmr_merge.py` (peak

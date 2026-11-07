@@ -10,6 +10,7 @@ import os
 import sys
 import types
 import unittest
+from unittest.mock import patch
 
 try:
     import numpy as np
@@ -265,6 +266,49 @@ class TestOrbitalsFromACheckpointAreOrthonormal(unittest.TestCase):
 
 
 class TestALogWithACheckpoint(unittest.TestCase):
+    def test_charge_spin_and_incomplete_geometry_are_refused(self):
+        for key, value, reason in (
+            ("charge", 1, "charge"),
+            ("mult", 3, "multiplicity"),
+            ("coords", [[0.0, 0.0, 0.0]], "geometry"),
+        ):
+            with self.subTest(field=key):
+                parser = _log("water_fk_plain")
+                parser.data[key] = value
+                self.assertIn(reason, parser.merge_fchk(_text("water_fk_plain.fchk")))
+                self.assertEqual(parser.data["mo_coeffs"], {})
+
+    def test_missing_orbitals_are_not_reported_as_a_success(self):
+        parser = _log("water_fk_mo")
+        original = parser.data["mo_coeffs"]
+        sections = _module("fchk").read_sections(_text("water_fk_mo.fchk"))
+        del sections["Alpha MO coefficients"]
+        with patch.object(_module("fchk"), "read_sections", return_value=sections):
+            self.assertIn("no complete", parser.merge_fchk("checkpoint"))
+        self.assertIs(parser.data["mo_coeffs"], original)
+
+    def test_damaged_basis_is_rejected_without_replacing_existing_orbitals(self):
+        for name, value in (
+            ("Shell to atom map", [99]),
+            ("Shell to atom map", [0]),
+            ("Number of primitives per shell", [0]),
+            ("Primitive exponents", [1.0]),
+            ("P(S=P) Contraction coefficients", [1.0]),
+            ("Shell types", [99]),
+        ):
+            with self.subTest(section=name, value=value):
+                parser = _log("water_fk_mo")
+                original = parser.data["mo_coeffs"]
+                sections = _module("fchk").read_sections(_text("water_fk_mo.fchk"))
+                if name in ("Shell to atom map", "Number of primitives per shell", "Shell types"):
+                    sections[name][0] = value[0]
+                else:
+                    sections[name] = value
+                with patch.object(_module("fchk"), "read_sections", return_value=sections):
+                    with self.assertRaises(ValueError):
+                        parser.merge_fchk("checkpoint")
+                self.assertIs(parser.data["mo_coeffs"], original)
+
     def test_the_orbitals_join_the_logs_results(self):
         parser = _log("water_fk_plain")
         self.assertEqual(parser.merge_fchk(_text("water_fk_plain.fchk")), "")
@@ -293,6 +337,12 @@ class TestALogWithACheckpoint(unittest.TestCase):
 
 
 class TestDamagedAndForeignFiles(unittest.TestCase):
+    def test_incomplete_coordinate_array_is_rejected(self):
+        sections = _module("fchk").read_sections(_text("water_fk_mo.fchk"))
+        sections["Current cartesian coordinates"].pop()
+        with self.assertRaisesRegex(ValueError, "coordinates"):
+            _module("fchk").structure(sections)
+
     def test_other_text_is_not_a_checkpoint(self):
         fchk = _module("fchk")
         self.assertFalse(fchk.looks_like_fchk(_text("water_fk_mo.out")))

@@ -1,0 +1,10 @@
+The files in this directory are output from Gaussian 16, used only as test input
+for the parser. They are not covered by this project's LGPL-3.0-or-later licence,
+and the program text they contain, including the citation block at the top of each
+file, belongs to Gaussian, Inc.
+
+They hold results for small textbook molecules (water, formaldehyde, methanol,
+ethane, benzene, dioxygen) and no research data. tools/sanitize_gaussian_log.py
+removed the licence banner, paths, user and machine names, dates and timings.
+
+To regenerate them you need your own licensed copy of Gaussian.

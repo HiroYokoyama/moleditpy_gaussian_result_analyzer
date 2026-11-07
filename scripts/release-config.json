@@ -1,0 +1,19 @@
+{
+  "source": "gaussian_result_analyzer/__init__.py",
+  "title": "Gaussian Result Analyzer",
+  "package": "gaussian_result_analyzer",
+  "archive": "gaussian_result_analyzer_{version}.zip",
+  "assets": [
+    "gaussian_result_analyzer_{version}.zip"
+  ],
+  "include": [
+    "README.md",
+    "LICENSE",
+    "COPYING",
+    "LICENSING.md"
+  ],
+  "exclude": [
+    "*/__pycache__/*",
+    "*/.git/*"
+  ]
+}

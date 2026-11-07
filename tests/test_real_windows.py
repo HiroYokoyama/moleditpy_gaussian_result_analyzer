@@ -64,6 +64,22 @@ class TestRealWindows(unittest.TestCase):
             with self.subTest(fixture=name, slot=slot):
                 self.assertIn(cls, [w["class"] for w in self._windows(name, slot)])
 
+    def test_optimizations_open_with_the_complete_trajectory(self):
+        for name in ("o2_triplet_uhf_opt", "water_fk_opt.fchk"):
+            with self.subTest(fixture=name):
+                window = self._windows(name, "show_trajectory")[0]
+                self.assertGreater(window["all_trajectory_steps"], 1)
+                self.assertEqual(window["trajectory_steps"], window["all_trajectory_steps"])
+                self.assertFalse(window["showing_scan_points"])
+
+    def test_relaxed_scans_still_default_to_scan_points(self):
+        for name in ("ethane_scan", "ethane_fk_scan.fchk"):
+            with self.subTest(fixture=name):
+                window = self._windows(name, "show_trajectory")[0]
+                self.assertGreater(window["trajectory_steps"], 1)
+                self.assertLess(window["trajectory_steps"], window["all_trajectory_steps"])
+                self.assertTrue(window["showing_scan_points"])
+
     def test_no_button_raises_or_reports_an_error(self):
         for name, slots in self.report.items():
             for slot, entry in slots.items():

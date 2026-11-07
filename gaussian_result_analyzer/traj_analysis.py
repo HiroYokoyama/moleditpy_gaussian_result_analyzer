@@ -91,8 +91,8 @@ class TrajectoryResultDialog(QDialog):
         self.scan_points = self.compute_scan_points(steps)
         self.showing_scan_points = False
 
-        # Default logic: prefer scan points if available
-        if len(self.scan_points) < len(self.all_steps) and len(self.scan_points) > 0:
+        # A plain optimization also has one scan ID; keep all its cycles visible.
+        if 1 < len(self.scan_points) < len(self.all_steps):
             self.steps = self.scan_points
             self.showing_scan_points = True
         self.show_relative = self.showing_scan_points

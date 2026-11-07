@@ -197,6 +197,10 @@ def main():
             for window in windows:
                 info = {"class": type(window).__name__, "title": window.windowTitle()}
                 info.update(_controls(window))
+                if type(window).__name__ == "TrajectoryResultDialog":
+                    info["trajectory_steps"] = len(window.steps)
+                    info["all_trajectory_steps"] = len(window.all_steps)
+                    info["showing_scan_points"] = window.showing_scan_points
                 entry["windows"].append(info)
                 known_now = set(QApplication.topLevelWidgets())
                 _press_everything(app, window, known_now)

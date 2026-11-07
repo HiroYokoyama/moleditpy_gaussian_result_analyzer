@@ -90,6 +90,20 @@ class _TrajCase(unittest.TestCase):
 
 
 class TestConstruction(unittest.TestCase):
+    def test_real_optimizations_open_with_all_cycles(self):
+        from test_fchk import _fchk, _log
+
+        for source in (_log, _fchk):
+            with self.subTest(source=source.__name__):
+                steps = source("water_fk_opt").data["scan_steps"]
+                self.assertEqual(len(steps), 4)
+                dlg = _make(steps)
+                self.assertEqual(len(dlg.steps), 4)
+                self.assertFalse(dlg.showing_scan_points)
+                self.assertFalse(dlg.show_relative)
+                self.assertEqual(dlg.slider.maximum(), 3)
+                self.assertEqual(dlg.lbl_info.text(), "Step 1/4")
+
     def test_all_steps_are_kept_without_scan_ids(self):
         dlg = _make(_plain_steps())
         self.assertEqual(len(dlg.steps), 3)

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 — 2026-11-10
 
 - On MoleditPy 5.2.0 and later, pass another program's file on to the next plugin by returning `False` instead of raising, so the host no longer logs a traceback for it. Older hosts keep the exception.
 

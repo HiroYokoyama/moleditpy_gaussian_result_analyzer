@@ -57,7 +57,7 @@ plugin handles it.
 
 ## Output files and formatted checkpoints
 
-The plugin reads the `.log`/`.out` and the `.fchk`/`.fch`. Opening either one also uses the other when it sits beside it with the same name and comes from the same job, so a job without `Pop=Full` still shows 3D orbitals from `formchk job.chk job.fchk`. **Load .fchk** picks a checkpoint by hand. A checkpoint alone gives structure, orbitals, charges, dipole, forces, modes, excited states and optimization steps; the SCF trace, thermochemistry, NMR, NBO tables and Hirshfeld charges need the log.
+The plugin reads the `.log`/`.out` and the `.fchk`/`.fch`, all through the same **Open** button, File > Open or a drop. Opening either one also uses the other when it sits beside it with the same name and comes from the same job, so a job without `Pop=Full` still shows 3D orbitals from `formchk job.chk job.fchk`. A checkpoint alone gives structure, orbitals, charges, dipole, forces, modes, excited states and optimization steps; the SCF trace, thermochemistry, NMR, NBO tables and Hirshfeld charges need the log.
 
 ## Keywords to request from Gaussian
 

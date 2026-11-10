@@ -33,8 +33,8 @@ as a zip of that directory.
 - `gui.py` — `GaussianResultAnalyzerDialog`, the main window. Owns the file loading,
   the 3D structure, atom picking, and one `show_*` launcher per analysis dialog.
 - `fchk.py` — formatted checkpoint sections, structure, basis and orbitals, plus
-  properties available without a log. `loading.py` finds matching sibling files;
-  the main window's **Load .fchk** attaches one manually. Attachment checks atoms,
+  properties available without a log. `loading.py` finds matching sibling files, so the one
+  Open button serves both kinds. Attachment checks atoms,
   geometry, charge, multiplicity and SCF energy before replacing orbitals.
   `tests/test_fchk.py` compares the paired `*_fk_*.out` / `.fchk` fixtures and
   independently checks orbital orthonormality on a numerical grid.

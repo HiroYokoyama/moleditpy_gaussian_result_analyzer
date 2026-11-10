@@ -54,7 +54,6 @@ TABS = [
 # (fixture, button attribute): a job that has the result enables the button.
 BUTTONS = [
     ("water_fk_plain.fchk", "btn_mo"),
-    ("water_fk_plain.fchk", "btn_fchk"),
     ("water_fk_plain.fchk", "btn_charge"),
     ("water_fk_plain.fchk", "btn_dipole"),
     ("water_fk_opt.fchk", "btn_traj"),

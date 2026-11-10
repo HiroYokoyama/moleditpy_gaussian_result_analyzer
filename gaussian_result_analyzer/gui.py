@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QAction, QIcon, QDesktopServices
 from PySide6.QtCore import QSize, Qt, QObject, QEvent, QTimer, QUrl
-from .loading import attach_fchk, load_gaussian_parser
+from .loading import load_gaussian_parser
 from .parser import IMAGINARY_FREQ_THRESHOLD
 from .utils import (
     normalize_atom_symbol,
@@ -51,7 +51,7 @@ def accept_drop_as_copy(event) -> bool:
 THEME_WINDOW = "#fdf5f8"
 THEME_PANEL = "#fbe9f0"
 THEME_MENU = "#f6dce6"
-THEME_ACCENT = "#b0406e"
+THEME_ACCENT = "#0066cc"
 
 
 class _ClickFilter(QObject):
@@ -560,12 +560,7 @@ class GaussianResultAnalyzerDialog(QDialog):
         self.btn_view_output.setToolTip(
             "Open the raw Gaussian output file in the text viewer"
         )
-        self.btn_fchk = QPushButton("Load .fchk")
-        self.btn_fchk.setToolTip("Take the orbitals from a formatted checkpoint")
-        self.btn_fchk.clicked.connect(self.load_fchk)
-        self.btn_fchk.setEnabled(False)
         btns_top_layout.addWidget(self.btn_view_output)
-        btns_top_layout.addWidget(self.btn_fchk)
 
         file_frame_layout.addLayout(btns_top_layout)
 
@@ -948,25 +943,6 @@ class GaussianResultAnalyzerDialog(QDialog):
         except Exception as e:  # pylint: disable=broad-exception-caught
             QMessageBox.critical(self, "Error", f"Failed to load file:\n{e}")
 
-    def load_fchk(self):
-        """Take the orbitals from a checkpoint chosen by the user."""
-        start_dir = os.path.dirname(self.file_path) if self.file_path else ""
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Load Formatted Checkpoint",
-            start_dir,
-            "Formatted Checkpoint (*.fchk *.fch);;All Files (*)",
-        )
-        if not path:
-            return
-        if not self.close_all_sub_dialogs():
-            return
-        if attach_fchk(self.parser, path):
-            self.update_button_states()
-            notify(self, self.parser.data["fchk_note"], 5000)
-        else:
-            QMessageBox.warning(self, "Load .fchk", self.parser.data["fchk_note"])
-
     def update_file_info_labels(self):
         """Update the file info labels (Path, Time, Versions)"""
         if getattr(self, "lbl_file_path", None) is None:
@@ -1077,13 +1053,9 @@ class GaussianResultAnalyzerDialog(QDialog):
         elif orb_energies and not mo_coeffs:
             tooltip = (
                 "Orbital energies available (no coefficients for visualization).\n"
-                "Use Load .fchk, or request them with Pop=Full GFInput IOp(6/7=3)."
+                "Open the job's .fchk, or request them with Pop=Full GFInput IOp(6/7=3)."
             )
         self.btn_mo.setToolTip(tooltip)
-        self.btn_fchk.setEnabled(bool(data.get("atoms")))
-        self.btn_fchk.setToolTip(
-            data.get("fchk_note") or "Take the orbitals from a formatted checkpoint"
-        )
 
         freqs = data.get("frequencies", [])
         has_freq = bool(freqs and len(freqs) > 0)

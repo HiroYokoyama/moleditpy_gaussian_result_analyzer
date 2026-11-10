@@ -1,7 +1,7 @@
 """Plugin entry points and metadata for the Gaussian Result Analyzer plugin."""
 
 PLUGIN_NAME = "Gaussian Result Analyzer"
-PLUGIN_VERSION = "0.1.2"
+PLUGIN_VERSION = "0.1.3"
 PLUGIN_AUTHOR = "HiroYokoyama"
 PLUGIN_DESCRIPTION = "UNDER DEVELOPMENT: Comprehensive analyzer for Gaussian output files (.log, .out) and formatted checkpoints (.fchk). Includes Vibrational, MO, TDDFT, and NMR analysis."
 PLUGIN_TAGS = ["Analysis", "DFT", "File"]
@@ -151,11 +151,23 @@ def is_gaussian_fchk(path):
         return looks_like_fchk(f.read(512))
 
 
+def _can_decline(context):
+    """Whether the host lets an opener decline with False (MoleditPy 5.2.0).
+
+    An older host takes False as handled, so there the file is passed on by raising.
+    """
+    version = getattr(context, "moleditpy_version", "")
+    try:
+        return tuple(int(part) for part in version.split(".")[:2]) >= (5, 2)
+    except (AttributeError, ValueError):
+        return False
+
+
 def initialize(context):
     """Initialize the Gaussian Result Analyzer plugin.
 
     Both .log and .out are shared with other programs' results, so the openers
-    look at the file and raise on anything else: the host then offers it to the
+    look at the file and decline anything else: the host then offers it to the
     next opener, which is how an ORCA .out still reaches the ORCA analyzer.
     """
     global _context
@@ -163,6 +175,8 @@ def initialize(context):
 
     def open_gaussian_file(path):
         if not is_gaussian_output(path):
+            if _can_decline(context):
+                return False
             raise ValueError(f"{path} is not Gaussian output")
         _open_gaussian_file(path, context)
 
@@ -188,6 +202,8 @@ def initialize(context):
 
     def open_fchk_file(path):
         if not is_gaussian_fchk(path):
+            if _can_decline(context):
+                return False
             raise ValueError(f"{path} is not a formatted checkpoint")
         _open_gaussian_file(path, context)
 

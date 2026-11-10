@@ -1,7 +1,7 @@
 """Parser cases found by running a wider range of Gaussian 16 jobs through it.
 
 Each fixture is a small job that shows the layout: a job that prints no MO table,
-a stability analysis, a #T log, a double hybrid.
+a stability analysis, a #T log, a double hybrid, a molecule above 50 atoms.
 """
 
 import importlib
@@ -9,6 +9,11 @@ import os
 import sys
 import types
 import unittest
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _SAMPLES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_outputs")
@@ -110,6 +115,35 @@ class TestDoubleHybrid(unittest.TestCase):
     def test_other_jobs_have_no_such_row(self):
         labels = [r["label"] for r in _parse("water_mp2")["energy_components"]]
         self.assertNotIn("Double-Hybrid Total", labels)
+
+
+#: Rows of the job's formatted checkpoint, which stores the gradient in the
+#: standard orientation.
+EXPECTED_GRADIENT = {0: [0.02431704, -9.739e-05, 0.00226528], 16: [0.01510906, -0.01795279, 0.01063452], 17: [-0.00271396, -0.0052722, 0.0043508], 52: [0.00214419, 0.00014741, -0.00765234]}
+
+
+@unittest.skipIf(np is None, "numpy is required to rotate the forces")
+class TestForcesAboveFiftyAtoms(unittest.TestCase):
+    """Gaussian then prints no input orientation; the input section gives the frame."""
+
+    def setUp(self):
+        self.data = _parse("heptadecane_force")
+
+    def test_the_fixture_prints_only_the_standard_orientation(self):
+        with open(os.path.join(_SAMPLES, "heptadecane_force.out"), encoding="utf-8") as f:
+            self.assertNotIn("Input orientation:", f.read())
+        self.assertEqual(len(self.data["atoms"]), 53)
+
+    def test_the_gradient_is_in_the_frame_of_the_structure(self):
+        for index, expected in EXPECTED_GRADIENT.items():
+            for got, want in zip(self.data["gradients"][index]["vector"], expected):
+                self.assertAlmostEqual(got, want, places=6)
+
+    def test_net_torque_vanishes_in_that_frame(self):
+        coords = np.array(self.data["coords"])
+        grads = np.array([g["vector"] for g in self.data["gradients"]])
+        torque = np.cross(coords - coords.mean(axis=0), grads).sum(axis=0)
+        self.assertLess(np.abs(torque).max(), 1e-4)
 
 
 if __name__ == "__main__":

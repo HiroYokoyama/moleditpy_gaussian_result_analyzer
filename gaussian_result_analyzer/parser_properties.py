@@ -12,7 +12,7 @@ _ATOM_CHARGE = re.compile(
 _DIPOLE = re.compile(
     r"X=\s*(-?\d+\.\d+)\s+Y=\s*(-?\d+\.\d+)\s+Z=\s*(-?\d+\.\d+)\s+Tot=\s*(-?\d+\.\d+)"
 )
-_S2 = re.compile(r"<S\*\*2>=\s*(-?\d+\.\d+)")
+_S2 = re.compile(r"^\s*<Sx>=.*<S\*\*2>=\s*(-?\d+\.\d+)")
 _DISPERSION = re.compile(r"Dispersion energy=\s*(-?\d+\.\d+)\s+Hartrees")
 _NBO_ROW = re.compile(
     r"^\s*(\d+)\.\s+((?:BD|CR|LP|LV|RY|3C|3Cn)\*?\s*\(\s*\d+\))\s*(.+?)\s+"
@@ -67,7 +67,7 @@ class _PropertyParsingMixin:
         actual = None
         for line in self.lines:
             match = _S2.search(line)
-            if match and "Excited State" not in line:
+            if match:
                 actual = float(match.group(1))
         if actual is None:
             return
@@ -93,6 +93,16 @@ class _PropertyParsingMixin:
         patterns = (
             ("MP2 Correlation", re.compile(r"\bE2\s*=\s*" + _D_FLOAT), False),
             ("MP2 Total", re.compile(r"EUMP2\s*=\s*" + _D_FLOAT), False),
+            (
+                "Double-Hybrid Correlation",
+                re.compile(r"\bE2\(\w+\)\s*=\s*" + _D_FLOAT),
+                False,
+            ),
+            (
+                "Double-Hybrid Total",
+                re.compile(r"\bE2\(\w+\)\s*=.*\bE\(\w+\)\s*=\s*" + _D_FLOAT),
+                False,
+            ),
             (
                 "CCSD Total",
                 re.compile(r"Wavefunction amplitudes converged\. E\(Corr\)=\s*" + _D_FLOAT),

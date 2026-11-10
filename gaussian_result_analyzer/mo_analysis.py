@@ -597,7 +597,7 @@ class MODialog(QDialog):
             )
             self.lbl_warning.setText(
                 "<b>Coefficients Missing.</b> Required Input:"
-                "<pre style='margin-top:0; margin-bottom:0;'>Pop=Full GFInput IOp(6/7=3)</pre>or a formatted checkpoint of this job: <b>Load .fchk</b> in the main window, or <pre style='margin-top:0; margin-bottom:0;'>formchk job.chk job.fchk</pre>"
+                "<pre style='margin-top:0; margin-bottom:0;'>Pop=Full GFInput IOp(6/7=3)</pre>or a formatted checkpoint of this job: open the <b>.fchk</b> from the main window, or <pre style='margin-top:0; margin-bottom:0;'>formchk job.chk job.fchk</pre>"
             )
             self.lbl_warning.setVisible(True)
             self.btn_copy_input.setVisible(True)

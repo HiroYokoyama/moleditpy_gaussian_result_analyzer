@@ -123,6 +123,28 @@ class _StructureParsingMixin:
             return None  # not the same structure: do not invent a frame
         return rotation
 
+    def _input_section_coords(self):
+        """Cartesian coordinates as typed in the input, or None for a Z-matrix."""
+        start = next(
+            (i for i, l in enumerate(self.lines) if "Symbolic Z-matrix:" in l), None
+        )
+        if start is None:
+            return None
+        coords = []
+        for line in self.lines[start + 2 :]:
+            parts = line.split()
+            if not parts:
+                break
+            if len(parts) == 5 and parts[1] in ("0", "-1"):
+                parts.pop(1)  # the freeze flag
+            try:
+                coords.append([float(v) for v in parts[1:4]])
+            except ValueError:
+                return None
+            if len(parts) != 4:
+                return None
+        return coords or None
+
     def parse_gradients(self):
         """Read every force block as gradients (schema: gradient = -force).
 
@@ -148,8 +170,13 @@ class _StructureParsingMixin:
             return
         final = self.data["all_gradients"][-1]
         grads = [dict(g, vector=list(g["vector"])) for g in final["grads"]]
-        if final["geometry_line"] is not None and self.data.get("coords"):
+        input_coords = None
+        if final["geometry_line"] is not None:
             _atoms, input_coords = self._read_geometry(final["geometry_line"])
+        elif len(self.data["all_gradients"]) == 1:
+            # Above 50 atoms the input orientation is not printed.
+            input_coords = self._input_section_coords()
+        if input_coords and self.data.get("coords"):
             rotation = self._rotation_between(input_coords, self.data["coords"])
             if rotation is not None:
                 for g in grads:

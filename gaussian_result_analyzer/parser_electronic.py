@@ -183,8 +183,8 @@ class _ElectronicParsingMixin:
             if "eigenvalues --" not in line:
                 break
             spin = "beta" if line.strip().startswith("Beta") else "alpha"
-            tail = line.split("--", 1)[1]
-            for k in range(0, len(tail), 10):
+            tail = line.split("--", 1)[1].rstrip()
+            for k in range(len(tail) % 10, len(tail), 10):
                 text = tail[k : k + 10].strip()
                 if _is_number(text):
                     values[spin].append(float(text))

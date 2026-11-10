@@ -96,6 +96,16 @@ class _SpectraParsingMixin:
             i += 1
         return i
 
+    def _untitled_thermochemistry(self):
+        """Line of the last Temperature row that zero-point corrections follow."""
+        start = None
+        for i, line in enumerate(self.lines[:-1]):
+            if re.match(r"^\s*Temperature\s+\d+\.\d+\s+Kelvin", line) and (
+                "Zero-point correction" in self.lines[i + 1]
+            ):
+                start = i
+        return start
+
     def parse_thermal(self):
         """Thermochemistry, in Hartree (Gaussian prints kcal/mol and cal/mol-K)."""
         self.data["thermal"] = {}
@@ -103,6 +113,8 @@ class _SpectraParsingMixin:
         for i, line in enumerate(self.lines):
             if line.strip() == "- Thermochemistry -":
                 start = i
+        if start is None:
+            start = self._untitled_thermochemistry()
         if start is None:
             return
         data = self.data["thermal"]

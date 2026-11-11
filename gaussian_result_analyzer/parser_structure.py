@@ -35,11 +35,31 @@ _CONVERGED_ROW = re.compile(
     r"(-?\d+\.\d+|\*+)\s+(\d+\.\d+)\s+(YES|NO)\s*$"
 )
 _JOB_STEP = "Proceeding to internal job step"
+_VERSION = re.compile(r"^ (Gaussian \d+):\s+(\S+)")
+_OPT_KEYWORD = re.compile(r"\b[fp]?opt\b", re.I)
 
 
 def _ends_job(line):
     """True on the line that closes a job step; the next one may follow."""
     return _JOB_STEP in line or "Normal termination of Gaussian" in line
+
+
+def _route_text(lines):
+    """The first route among *lines* as one string, or None without one.
+
+    Gaussian echoes a long route in fixed-width rows that may break mid-word.
+    """
+    for i, line in enumerate(lines):
+        if line.startswith(" #"):
+            route = []
+            for row in lines[i:]:
+                if row.strip().startswith("---"):
+                    break
+                route.append(row[1:].rstrip("\r\n"))
+            return "".join(route)
+    return None
+
+
 _IRC_BANNER = "IRC-IRC-IRC"
 _IRC_POINT = re.compile(r"^\s*Point Number:\s+(\d+)\s+Path Number:\s+(\d+)")
 _IRC_DIRECTION = re.compile(r"^\s*Point Number\s+\d+\s+in\s+(FORWARD|REVERSE)\s+path")
@@ -80,6 +100,7 @@ class _StructureParsingMixin:
         """Version, charge/multiplicity, final energy and geometry, job status."""
         last_standard = last_any = None
         new_job = False
+        charge_above = False
         for i, line in enumerate(self.lines):
             if _ends_job(line):
                 new_job = True
@@ -92,16 +113,20 @@ class _StructureParsingMixin:
                 if match.group(1) == "Standard":
                     last_standard = i
                 continue
-            version = re.match(r"^ (Gaussian \d+):\s+(\S+)", line)
-            if version:
-                self.data["version"] = f"{version.group(1)} {version.group(2)}"
-                continue
             charge = re.match(
                 r"^\s*Charge\s*=\s*(-?\d+)\s+Multiplicity\s*=\s*(\d+)", line
             )
             if charge:
-                self.data["charge"] = int(charge.group(1))
-                self.data["mult"] = int(charge.group(2))
+                # Counterpoise fragments and ONIOM layers follow the whole system's.
+                if not charge_above:
+                    self.data["charge"] = int(charge.group(1))
+                    self.data["mult"] = int(charge.group(2))
+                charge_above = True
+                continue
+            charge_above = False
+            version = _VERSION.match(line)
+            if version:
+                self.data["version"] = f"{version.group(1)} {version.group(2)}"
                 continue
             scf = _SCF_DONE.match(line)
             if scf:
@@ -128,6 +153,8 @@ class _StructureParsingMixin:
             if "Error termination" in line:
                 self.data["termination_status"] = "ERROR"
                 break
+            if _JOB_STEP in line or _VERSION.match(line):
+                break  # a later job step began and has not ended
 
     @staticmethod
     def _rotation_between(source, target):
@@ -347,15 +374,8 @@ class _StructureParsingMixin:
         The Freq step of Opt Freq checks the stationary point with one more
         "Step number" that is not a cycle. A job without a route is kept.
         """
-        for i, line in enumerate(job):
-            if line.startswith(" #"):
-                route = []
-                for row in job[i:]:
-                    if row.strip().startswith("---"):
-                        break
-                    route.append(row.strip())
-                return bool(re.search(r"\bopt\b", "".join(route), re.I))
-        return True
+        route = _route_text(job)
+        return route is None or bool(_OPT_KEYWORD.search(route))
 
     def _read_rigid_scan(self, start, end):
         """Append one point per single-point energy of a rigid (Scan) job."""

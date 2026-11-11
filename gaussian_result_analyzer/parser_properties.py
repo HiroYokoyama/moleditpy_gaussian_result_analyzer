@@ -3,6 +3,8 @@
 import re
 import logging
 
+from .parser_structure import _route_text
+
 #: Debye per atomic unit of dipole moment
 AU_TO_DEBYE = 2.541746473
 
@@ -199,8 +201,7 @@ class _PropertyParsingMixin:
 
     def _esp_scheme(self):
         """Display name of the electrostatic-potential charges this job requested."""
-        route = " ".join(line for line in self.lines[:400] if line.startswith(" #"))
-        route = route.upper()
+        route = (_route_text(self.lines[:400]) or "").upper()
         if "CHELPG" in route:
             return "CHELPG"
         if re.search(r"\bMK\b", route):
@@ -215,7 +216,11 @@ class _PropertyParsingMixin:
         npa_read = False
         for i, line in enumerate(self.lines):
             text = line.strip()
-            if text in ("Mulliken charges:", "Mulliken charges and spin densities:"):
+            if text in (
+                "Mulliken charges:",
+                "Mulliken charges and spin densities:",
+                "Mulliken atomic charges:",
+            ):
                 rows = self._charge_rows(i + 1, spin_column=True)
                 if rows:
                     charges["Mulliken"] = rows
@@ -223,7 +228,7 @@ class _PropertyParsingMixin:
                 rows = self._charge_rows(i + 1)
                 if rows:
                     charges[esp_name] = rows
-            elif text == "APT charges:":
+            elif text in ("APT charges:", "APT atomic charges:"):
                 rows = self._charge_rows(i + 1)
                 if rows:
                     charges["APT"] = rows

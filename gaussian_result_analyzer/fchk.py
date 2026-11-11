@@ -340,7 +340,7 @@ def _esp_label(route):
     upper = route.upper()
     if "CHELPG" in upper:
         return "CHELPG"
-    if "POP=MK" in upper or "POP=(MK" in upper or ",MK" in upper:
+    if re.search(r"\bMK\b", upper):
         return "Merz-Kollman"
     return "ESP"
 

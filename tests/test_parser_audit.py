@@ -121,5 +121,20 @@ class TestUnfinishedLaterStep(unittest.TestCase):
             )
 
 
+class TestForceTableStillBeingWritten(unittest.TestCase):
+    """A log read while the job writes its forces, above 50 atoms."""
+
+    def test_a_table_cut_short_is_left_out(self):
+        text = _text("heptadecane_force")
+        table = text.rfind("Forces (Hartrees/Bohr)")
+        rows = text[table:].splitlines()
+        data = _parse_text(text[:table] + "\n".join(rows[:53]))
+        self.assertEqual(data["gradients"], [])
+        self.assertEqual(len(data["atoms"]), 53)
+
+    def test_the_complete_table_is_read(self):
+        self.assertEqual(len(_parse_text(_text("heptadecane_force"))["gradients"]), 53)
+
+
 if __name__ == "__main__":
     unittest.main()

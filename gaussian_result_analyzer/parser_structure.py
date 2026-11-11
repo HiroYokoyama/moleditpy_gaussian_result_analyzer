@@ -279,7 +279,11 @@ class _StructureParsingMixin:
             if "Forces (Hartrees/Bohr)" not in line:
                 continue
             block = self._read_force_block(i)
-            if block and last_input in self._input_frames:
+            if (
+                block
+                and last_input in self._input_frames
+                and len(block) == len(self._input_frames[last_input])
+            ):
                 turned = self._torque_free(
                     self._input_frames[last_input], [g["vector"] for g in block]
                 )
@@ -322,6 +326,8 @@ class _StructureParsingMixin:
         for line in self.lines[header_idx + 3 :]:
             parts = line.split()
             if len(parts) != 5:
+                if line.strip().startswith("---"):
+                    return block
                 break
             try:
                 idx, atomic_number = int(parts[0]), int(parts[1])
@@ -335,7 +341,7 @@ class _StructureParsingMixin:
                     "vector": [-v for v in force],
                 }
             )
-        return block
+        return []  # cut off before its closing rule: the job is still writing it
 
     def _job_ranges(self):
         """(start, end) line ranges of each Link1 job step."""

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 — 2026-11-12
+
+- Open `Freq=HPModes` logs; their high-precision frequency table stopped the load.
+- Counterpoise and ONIOM jobs report the whole system's charge and multiplicity, not the last fragment's.
+- Read Gaussian 09's `Mulliken atomic charges:` and `APT atomic charges:` tables.
+- Read a route echoed over two lines: CHELPG charges are no longer labelled "ESP", and `FOpt`/`POpt` jobs show their optimization steps.
+- A job whose second step is still running, or was killed, no longer reports "Terminated normally".
+- Open the log of a job above 50 atoms that ends inside a force table.
+
 ## 0.3.0 — 2026-11-11
 
 - Read rigid `Scan` jobs: one point per energy, with the scanned value.

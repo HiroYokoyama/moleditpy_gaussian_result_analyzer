@@ -48,7 +48,9 @@ class _SpectraParsingMixin:
         i = start
         while i < len(self.lines):
             stripped = self.lines[i].strip()
-            if stripped.startswith("Frequencies --"):
+            if stripped.startswith("Frequencies ---"):
+                current = []  # the HPModes table; the 3-per-row one follows it
+            elif stripped.startswith("Frequencies --"):
                 values = [float(v) for v in stripped.split("--", 1)[1].split()]
                 current = [
                     {"freq": v, "ir": 0.0, "raman": 0.0, "vector": []} for v in values

@@ -37,9 +37,9 @@ _CONVERGED_ROW = re.compile(
 _JOB_STEP = "Proceeding to internal job step"
 
 
-def _starts_job(line):
-    """True on the line that opens a Link1 job step."""
-    return _JOB_STEP in line or line.startswith(" Entering Link 1 =")
+def _ends_job(line):
+    """True on the line that closes a job step; the next one may follow."""
+    return _JOB_STEP in line or "Normal termination of Gaussian" in line
 _IRC_BANNER = "IRC-IRC-IRC"
 _IRC_POINT = re.compile(r"^\s*Point Number:\s+(\d+)\s+Path Number:\s+(\d+)")
 _IRC_DIRECTION = re.compile(r"^\s*Point Number\s+\d+\s+in\s+(FORWARD|REVERSE)\s+path")
@@ -79,12 +79,15 @@ class _StructureParsingMixin:
     def parse_basic(self):
         """Version, charge/multiplicity, final energy and geometry, job status."""
         last_standard = last_any = None
+        new_job = False
         for i, line in enumerate(self.lines):
-            if _starts_job(line):
-                # The final structure is that of the last job step printing one.
-                last_standard = last_any = None
+            if _ends_job(line):
+                new_job = True
             match = _GEOMETRY_HEADER.match(line)
             if match:
+                if new_job:
+                    # The final structure is that of the last job step printing one.
+                    last_standard, new_job = None, False
                 last_any = i
                 if match.group(1) == "Standard":
                     last_standard = i
@@ -112,8 +115,6 @@ class _StructureParsingMixin:
         # MO coefficients, normal modes and the dipole are all in the standard
         # orientation; it is only absent under NoSymm, where input is used.
         header = last_standard if last_standard is not None else last_any
-        if header is None:
-            header = self._last_geometry_header()
         if header is not None:
             atoms, coords = self._read_geometry(header)
             if atoms:
@@ -127,17 +128,6 @@ class _StructureParsingMixin:
             if "Error termination" in line:
                 self.data["termination_status"] = "ERROR"
                 break
-
-    def _last_geometry_header(self):
-        """Line of the last orientation table, preferring the standard one."""
-        last_standard = last_any = None
-        for i, line in enumerate(self.lines):
-            match = _GEOMETRY_HEADER.match(line)
-            if match:
-                last_any = i
-                if match.group(1) == "Standard":
-                    last_standard = i
-        return last_standard if last_standard is not None else last_any
 
     @staticmethod
     def _rotation_between(source, target):
@@ -322,7 +312,8 @@ class _StructureParsingMixin:
 
     def _job_ranges(self):
         """(start, end) line ranges of each Link1 job step."""
-        starts = [0] + [i for i, l in enumerate(self.lines) if i and _starts_job(l)]
+        starts = [0] + [i + 1 for i, l in enumerate(self.lines) if _ends_job(l)]
+        starts = sorted(set(s for s in starts if s < len(self.lines)))
         return list(zip(starts, starts[1:] + [len(self.lines)]))
 
     def parse_trajectory(self):

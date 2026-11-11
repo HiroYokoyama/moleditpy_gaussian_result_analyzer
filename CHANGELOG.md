@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 — 2026-11-11
+
+- Read rigid `Scan` jobs: one point per energy, with the scanned value.
+- Read IRC paths from the reverse end to the forward end, with the TS at zero; the final structure is the last point.
+- Point the forces of every optimization step the right way above 50 atoms, not only of a single-point job.
+- Opt Freq no longer shows the Freq step's check as one more optimization cycle.
+- Counterpoise and anharmonic jobs report the job's own energy, structure and orbitals, not those of a monomer or a displaced geometry; the counterpoise-corrected energy and BSSE are listed.
+- Read the CASSCF energy.
+- A Link1 step that starts without "Proceeding to internal job step" is recognised.
+
 ## 0.2.0 — 2026-11-11
 
 - Read every orbital energy of a job that prints no MO table. Only a few were read, and with wrong values.

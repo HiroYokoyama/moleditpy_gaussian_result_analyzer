@@ -1,7 +1,7 @@
 """Plugin entry points and metadata for the Gaussian Result Analyzer plugin."""
 
 PLUGIN_NAME = "Gaussian Result Analyzer"
-PLUGIN_VERSION = "0.2.0"
+PLUGIN_VERSION = "0.3.0"
 PLUGIN_AUTHOR = "HiroYokoyama"
 PLUGIN_DESCRIPTION = "Comprehensive analyzer for Gaussian output files (.log, .out) and formatted checkpoints (.fchk). Includes Vibrational, MO, TDDFT, and NMR analysis."
 PLUGIN_TAGS = ["Analysis", "DFT", "File"]

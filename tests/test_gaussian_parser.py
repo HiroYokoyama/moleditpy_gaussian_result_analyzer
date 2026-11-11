@@ -73,7 +73,8 @@ class TestBasics(unittest.TestCase):
 class TestTrajectories(unittest.TestCase):
     def test_optimization_cycles(self):
         data = _parse("benzene_opt_freq")
-        self.assertEqual(len(data["scan_steps"]), 3)
+        # Two cycles; the Freq step's "Step number 1 out of 2" is a check, not one.
+        self.assertEqual(len(data["scan_steps"]), 2)
         self.assertTrue(data["converged"])
 
     def test_relaxed_scan_keeps_only_the_converged_points(self):

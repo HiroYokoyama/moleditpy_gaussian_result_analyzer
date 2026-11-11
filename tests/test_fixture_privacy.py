@@ -22,7 +22,7 @@ def _samples():
     return sorted(f for f in os.listdir(SAMPLES) if f.endswith((".log", ".out")))
 
 
-_SAFE_MOLECULES = {"benzene", "ethane", "h2co", "heptadecane", "methyl", "o2", "water"}
+_SAFE_MOLECULES = {"benzene", "ethane", "h2co", "hcn", "heptadecane", "methyl", "n2", "o2", "tetratriacontane", "water"}
 
 
 def _checkpoints():

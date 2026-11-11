@@ -110,6 +110,12 @@ class _PropertyParsingMixin:
             ),
             ("CCSD(T) Total", re.compile(r"CCSD\(T\)=\s*" + _D_FLOAT), False),
             ("T1 Diagnostic", re.compile(r"T1 Diagnostic\s*=\s*" + _D_FLOAT), True),
+            (
+                "Counterpoise Corrected",
+                re.compile(r"Counterpoise corrected energy\s*=\s*" + _D_FLOAT),
+                False,
+            ),
+            ("BSSE", re.compile(r"BSSE energy\s*=\s*" + _D_FLOAT), False),
         )
         for line in self.lines:
             for label, pattern, dimensionless in patterns:

@@ -86,8 +86,40 @@ class GaussianParser(
         self._reset_data()
         self.filename = filename
         self.raw_content = content
-        self.lines = content.splitlines()
+        self.lines = self._without_auxiliary(content.splitlines())
         self.parse_all(progress=progress)
+
+    @staticmethod
+    def _without_auxiliary(lines):
+        """lines without the calculations that only serve the job's result.
+
+        Counterpoise monomers and the displaced geometries of an anharmonic
+        frequency job each print an SCF, orbitals and, for monomers, a
+        structure, which would otherwise replace the job's own.
+        """
+        drop = []
+        for i, line in enumerate(lines):
+            if "Counterpoise: doing calculation for fragment" in line:
+                closing = ("Counterpoise: doing full-system", "Counterpoise corrected energy")
+            elif "Anharmonic Data: Displacement Vectors Definition" in line:
+                closing = ("Harmonic frequencies (cm**-1)",)
+            else:
+                continue
+            if drop and i < drop[-1][1]:
+                continue
+            end = next(
+                (j for j in range(i + 1, len(lines)) if any(c in lines[j] for c in closing)),
+                len(lines),
+            )
+            drop.append((i, end))
+        if not drop:
+            return lines
+        kept, start = [], 0
+        for begin, end in drop:
+            kept.extend(lines[start:begin])
+            start = end
+        kept.extend(lines[start:])
+        return kept
 
     def load_fchk(self, content, filename="", progress=None):
         """Fill the data from a formatted checkpoint, with no output file."""

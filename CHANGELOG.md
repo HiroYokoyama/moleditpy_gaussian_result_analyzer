@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0 — 2026-11-14
+
+- First stable release. Orbitals read from a log are now checked against an exact overlap matrix in the test suite; no change in behaviour since 0.3.1.
+
 ## 0.3.1 — 2026-11-12
 
 - Open `Freq=HPModes` logs; their high-precision frequency table stopped the load.

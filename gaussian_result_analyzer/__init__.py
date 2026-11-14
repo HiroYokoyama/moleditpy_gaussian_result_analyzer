@@ -1,13 +1,13 @@
 """Plugin entry points and metadata for the Gaussian Result Analyzer plugin."""
 
 PLUGIN_NAME = "Gaussian Result Analyzer"
-PLUGIN_VERSION = "1.0.0"
+PLUGIN_VERSION = "1.0.1"
 PLUGIN_AUTHOR = "HiroYokoyama"
 PLUGIN_DESCRIPTION = "Comprehensive analyzer for Gaussian output files (.log, .out) and formatted checkpoints (.fchk). Includes Vibrational, MO, TDDFT, and NMR analysis."
 PLUGIN_TAGS = ["Analysis", "DFT", "File"]
 PLUGIN_SUPPORTED_MOLEDITPY_VERSION = ">=5.0.0, <6.0.0"
 PLUGIN_SUPPORTED_PYTHON_VERSION = ">=3.9, <3.15"
-PLUGIN_DEPENDENCIES = ["rdkit", "PySide6", "matplotlib", "Pillow"]
+PLUGIN_DEPENDENCIES = ["rdkit", "PySide6-Essentials", "matplotlib", "Pillow"]
 PLUGIN_OPTIONAL_DEPENDENCIES = ["nmrsim"]
 
 from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402

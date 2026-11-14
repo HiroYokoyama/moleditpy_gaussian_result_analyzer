@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 — 2026-11-14
+
+- Declare the Qt dependency as `PySide6-Essentials`, the package MoleditPy itself ships, instead of the full `PySide6`.
+
 ## 1.0.0 — 2026-11-14
 
 - First stable release. Orbitals read from a log are now checked against an exact overlap matrix in the test suite; no change in behaviour since 0.3.1.

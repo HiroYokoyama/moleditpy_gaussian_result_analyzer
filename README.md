@@ -17,20 +17,33 @@ licensed copy of Gaussian to produce the files it reads.
 
 ## Screenshots
 
-![Main window](img/main.png)
+The analyzer works beside the MoleditPy window rather than inside a viewer of its
+own. Pick an orbital, a normal mode or a scan point, and MoleditPy's 3D view
+follows: orbitals as isosurfaces, modes as arrows and animation, steps as geometries.
 
-| Molecular orbitals | Relaxed scan |
+![Formaldehyde HOMO, evaluated from the MO coefficients in the log and drawn in MoleditPy](img/mo.gif)
+
+| Normal mode animation | Relaxed scan playback |
 |---|---|
-| ![Molecular orbitals](img/mo.png) | ![Relaxed scan](img/scan.png) |
+| ![Benzene out-of-plane C-H bend, the strongest IR band](img/frequencies.gif) | ![Ethane torsion scan, energy against dihedral](img/scan.gif) |
 
-| Frequencies | NMR |
+**Main window**: one button per analysis, enabled when the output holds the data.
+
+![MoleditPy with the Gaussian Result Analyzer open on a benzene optimization and frequency job](img/main.png)
+
+| Molecular orbitals | Frequencies |
 |---|---|
-| ![Frequencies](img/frequencies.png) | ![NMR](img/nmr.png) |
+| ![Formaldehyde HOMO](img/mo.png) | ![Benzene IR-active mode with displacement vectors](img/frequencies.png) |
 
-![TD-DFT spectrum](img/tddft.png)
+| Atomic charges | NMR |
+|---|---|
+| ![Methanol Mulliken charges as atom colors and labels](img/charges.png) | ![Methanol 1H stick spectrum with the protons highlighted](img/nmr.png) |
 
-All taken from the jobs in `tests/sample_outputs`. The 3D view belongs to the MoleditPy
-window, so the isosurfaces and animated modes appear there rather than here.
+| Relaxed scan | TD-DFT |
+|---|---|
+| ![Ethane torsion scan energy profile](img/scan.png) | ![Formaldehyde absorption spectrum](img/tddft.png) |
+
+All taken with MoleditPy 5.3.2 from the jobs in `tests/sample_outputs`.
 
 ## Features
 

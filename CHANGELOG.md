@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2 — 2026-11-23
+
+- README: new screenshots taken beside the MoleditPy window, with animations of an orbital, a normal mode and a relaxed scan.
+
 ## 1.3.1 — 2026-11-21
 
 - TDDFT: transition orbital numbers now follow the MO table's 0-based numbering. Gaussian prints them from 1, so a state's dominant transition read one higher than the orbitals in the MO analysis (the log's 8 -> 9 is 7 -> 8, HOMO -> LUMO).
